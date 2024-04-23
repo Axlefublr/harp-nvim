@@ -24,7 +24,7 @@ local function split_by_newlines(string)
 	return lines
 end
 
-function M.local_get()
+function M.default_get()
 	-- when you'll press your remap to get (<Leader>s by default), you'll see "get harp: " in your statusline
 	-- this is just a message to let you know the action you're doing
 	-- you can remove it by specifying an empty string instead (''), or defining your own message that makes more sense to you
@@ -46,7 +46,7 @@ function M.local_get()
 	end
 end
 
-function M.local_set()
+function M.default_set()
 	local register = get_char('set harp: ')
 	if register == nil then return end
 	-- gets the full path of the current buffer.
