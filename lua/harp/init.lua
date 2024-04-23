@@ -125,7 +125,7 @@ function M.harp_cd_set()
 	local cwd = vim.fn.getcwd()
 	cwd = vim.fn.fnamemodify(cwd, ':~')
 	-- `harp update 'cd_harps' a --path '~/prog/dotfiles'`
-	vim.fn.system("harp update 'cd_harps' " .. register .. " --path '" .. cwd "'")
+	vim.fn.system("harp update 'cd_harps' " .. register .. " --path '" .. cwd .. "'")
 	if vim.v.shell_error == 0 then vim.notify('set cd harp ' .. register) end
 end
 
