@@ -199,5 +199,5 @@ function M.setup()
 		return
 	end
 end
-M.setup()
+
 return M
