@@ -1,4 +1,4 @@
-local M= {}
+local M = {}
 -- Don't take this example config at face value: it just contains the ideas that I was able to come up with and find useful,
 -- the actual possibilities are limitless, so take inspiration from the ideas shown to make what *you* want out of harp in your neovim experience
 
@@ -195,9 +195,9 @@ end
 
 function M.setup()
 	if vim.fn.executable('harp') == 0 then
-		print('harp.nvim: harp not found in your path, aborting setup')
+		print('harp.nvim: harp not found in your path')
 		return
 	end
 end
-
+M.setup()
 return M
