@@ -130,7 +130,7 @@ function M.harp_cd_set()
 end
 
 function M.harp_perbuffer_mark_get()
-	local register = get_char('set local mark: ')
+	local register = get_char('get local mark: ')
 	if register == nil then return end
 	local path = vim.fn.expand('%:~')
 	-- `harp get 'local_marks_~/prog/dotfiles/colors.css' a --line --column`
@@ -165,7 +165,7 @@ function M.harp_perbuffer_mark_set()
 end
 
 function M.harp_global_mark_get()
-	local register = get_char('set global mark: ')
+	local register = get_char('get global mark: ')
 	if register == nil then return end
 	-- `harp get 'global_marks' a --path --line --column`
 	local output = vim.fn.system("harp get 'global_marks' " .. register .. ' --path --line --column')
@@ -195,7 +195,7 @@ end
 
 function M.setup()
 	if vim.fn.executable('harp') == 0 then
-		print('harp.nvim: harp not found in your path')
+		print('harp-nvim: harp was not found in your path')
 		return
 	end
 end
