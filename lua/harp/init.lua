@@ -193,4 +193,11 @@ function M.harp_global_mark_set()
 	if vim.v.shell_error == 0 then vim.notify('set global mark ' .. register) end
 end
 
+function M.setup()
+	if vim.fn.executable('harp') == 0 then
+		print('harp.nvim: harp not found in your path, aborting setup')
+		return
+	end
+end
+
 return M
