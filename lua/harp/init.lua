@@ -24,8 +24,8 @@ local function split_by_newlines(string)
 	return lines
 end
 
-function M.harp_get()
-	-- when you'll press your remap to harp_get (<Leader>s by default), you'll see "get harp: " in your statusline
+function M.get()
+	-- when you'll press your remap to get (<Leader>s by default), you'll see "get harp: " in your statusline
 	-- this is just a message to let you know the action you're doing
 	-- you can remove it by specifying an empty string instead (''), or defining your own message that makes more sense to you
 	local register = get_char('get harp: ')
@@ -46,7 +46,7 @@ function M.harp_get()
 	end
 end
 
-function M.harp_set()
+function M.set()
 	local register = get_char('set harp: ')
 	if register == nil then return end
 	-- gets the full path of the current buffer.
@@ -62,7 +62,7 @@ function M.harp_set()
 	if vim.v.shell_error == 0 then vim.notify('set harp ' .. register) end
 end
 
-function M.harp_percwd_get()
+function M.percwd_get()
 	local register = get_char('get local harp: ')
 	if register == nil then return end
 	local cwd = vim.fn.getcwd()
@@ -82,7 +82,7 @@ function M.harp_percwd_get()
 	end
 end
 
-function M.harp_percwd_set()
+function M.percwd_set()
 	local register = get_char('set local harp: ')
 	if register == nil then return end
 	local cwd = vim.fn.getcwd()
@@ -97,13 +97,13 @@ function M.harp_percwd_set()
 	-- this lets you save storage space in the data file while retaining the ability to store any buffer path
 	local path = vim.fn.expand('%:~:.')
 	-- the command call ends up looking something like: `harp update 'cwd_harps_~/programming/dotfiles' a --path "astro/lua/lazy_setup.lua"`
-	-- we only store a relative path because we are *already* relative to the correct directory when we call harp_percwd_get, so there's no need to have the full file path (:edit accepts either a full path, or a path relative to cwd )
+	-- we only store a relative path because we are *already* relative to the correct directory when we call percwd_get, so there's no need to have the full file path (:edit accepts either a full path, or a path relative to cwd )
 	-- so we need to store less characters this way
 	vim.fn.system("harp update 'cwd_harps_" .. cwd .. "' " .. register .. " --path '" .. path .. "'")
 	if vim.v.shell_error == 0 then vim.notify('set local harp ' .. register) end
 end
 
-function M.harp_cd_get()
+function M.cd_get()
 	local register = get_char('get cd harp: ')
 	if register == nil then return end
 	-- `harp get 'cd_harps' a --path`
@@ -119,7 +119,7 @@ function M.harp_cd_get()
 	end
 end
 
-function M.harp_cd_set()
+function M.cd_set()
 	local register = get_char('set cd harp: ')
 	if register == nil then return end
 	local cwd = vim.fn.getcwd()
@@ -129,7 +129,7 @@ function M.harp_cd_set()
 	if vim.v.shell_error == 0 then vim.notify('set cd harp ' .. register) end
 end
 
-function M.harp_perbuffer_mark_get()
+function M.perbuffer_mark_get()
 	local register = get_char('get local mark: ')
 	if register == nil then return end
 	local path = vim.fn.expand('%:~')
@@ -152,7 +152,7 @@ function M.harp_perbuffer_mark_get()
 	end
 end
 
-function M.harp_perbuffer_mark_set()
+function M.perbuffer_mark_set()
 	local register = get_char('set local mark: ')
 	if register == nil then return end
 	local path = vim.fn.expand('%:~')
@@ -164,7 +164,7 @@ function M.harp_perbuffer_mark_set()
 	if vim.v.shell_error == 0 then vim.notify('set local mark ' .. register) end
 end
 
-function M.harp_global_mark_get()
+function M.global_mark_get()
 	local register = get_char('get global mark: ')
 	if register == nil then return end
 	-- `harp get 'global_marks' a --path --line --column`
@@ -181,7 +181,7 @@ function M.harp_global_mark_get()
 	end
 end
 
-function M.harp_global_mark_set()
+function M.global_mark_set()
 	local register = get_char('set global mark: ')
 	if register == nil then return end
 	local path = vim.fn.expand('%:~')
