@@ -3,7 +3,7 @@ local M = {}
 -- the actual possibilities are limitless, so take inspiration from the ideas shown to make what *you* want out of harp in your neovim experience
 
 -- You could, technically, just copy paste this entire file into your neovim config, however you probably don't want to do that.
--- function M.ybe you don't care about some features, or want to make your own; maybe the default mappings don't make sense for you and you want to change them.
+-- Maybe you don't care about some features, or want to make your own; maybe the default mappings don't make sense for you and you want to change them.
 
 -- You'll see this function get used throughout most, if not all, mappings. The reason for it to exist is simply so we don't have to make a billion different mappings per every key.
 --- Get a character from the user, unless they press escape, in which case return nil, usually to cancel whatever action the user wanted to do.
