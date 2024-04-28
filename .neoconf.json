@@ -42,7 +42,6 @@
 			"Lua.completion.workspaceWord": true,
 			"Lua.diagnostics.disable": [
 				"lowercase-global",
-				"undefined-global",
 				"redefined-local",
 			],
 			"Lua.workspace.checkThirdParty": false,
