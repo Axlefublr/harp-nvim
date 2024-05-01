@@ -1,14 +1,8 @@
 local M = {}
--- Don't take this example config at face value: it just contains the ideas that I was able to come up with and find useful,
--- the actual possibilities are limitless, so take inspiration from the ideas shown to make what *you* want out of harp in your neovim experience
-
--- You could, technically, just copy paste this entire file into your neovim config, however you probably don't want to do that.
--- Maybe you don't care about some features, or want to make your own; maybe the default mappings don't make sense for you and you want to change them.
-
--- You'll see this function get used throughout most, if not all, mappings. The reason for it to exist is simply so we don't have to make a billion different mappings per every key.
 
 --- Get a character from the user, unless they press escape, in which case return nil, usually to cancel whatever action the user wanted to do.
---- @param prompt string What text to show when asking the user for the character
+--- You'll see this function get used throughout most, if not all, default mappings. The reason for it to exist is simply so we don't have to make a billion different mappings per every key.
+---@param prompt string what text to show when asking the user for the character.
 function M.get_char(prompt)
 	prompt = prompt or ''
 	vim.api.nvim_echo({ { prompt, 'Input' } }, true, {})
@@ -21,8 +15,8 @@ function M.get_char(prompt)
 end
 
 --- Split input by lines, get an array-like table with each line.
---- @param string string
----@return table
+---@param string string
+---@return table lines
 function M.split_by_newlines(string)
 	local lines = {}
 	for line in string.gmatch(string, '([^\n]+)') do
@@ -31,12 +25,33 @@ function M.split_by_newlines(string)
 	return lines
 end
 
---- Get the path to a default (global) harp.
---- `nil`, if it doesn't exist.
---- @param register string
---- @return string?
+--- Returns the full path of the current buffer.
+--- However, if it's in your home directory, /home/username will instead be displayed as ~
+--- /home/username/programming/dotfiles/colors.css → ~/programming/dotfiles/colors.css
+---@return string path
+function M.path_get_full_buffer() return vim.fn.expand('%:~') end
+
+--- Returns your current working directory.
+--- If it has /home/username, that will be replaced with ~
+--- /home/username/prog/dotfiles → ~/prog/dotfiles
+---@return string cwd
+function M.path_get_cwd() return vim.fn.fnamemodify(vim.fn.getcwd(), ':~') end
+
+--- Returns the path to the current buffer.
+--- If it's inside of cwd, it will be relative to cwd.
+--- But if it's not, it's a full path that replaces /home/username with ~
+--- So, if your cwd is ~/prog/dotfiles and the buffer's path is /home/username/dotfiles/awesome/keys.lua,
+--- it will be turned into awesome/keys.lua
+--- If the buffer's path was /home/username/backup/kitty/kitty.conf (notice, it's not in dotfiles anymore),
+--- it will be turned into ~/backup/kitty/kitty.conf
+---@return string buffer_path
+function M.path_get_relative_buffer() return vim.fn.expand('%:~:.') end
+
+--- Get the path to a default (global) harp, located in the `harps` section.
+---@param register string
+---@return string? path `nil`, if it doesn't exist in the register.
 function M.default_get_path(register)
-	local output = vim.fn.system('harp get harps ' .. register .. ' --path')
+	local output = vim.fn.system("harp get harps '" .. register .. "' --path")
 	-- vim.v.shell_error is set by calling vim.fn.system() — so basically, it's the exit status of the last called shell command
 	if vim.v.shell_error == 0 and output then
 		return output
@@ -45,14 +60,12 @@ function M.default_get_path(register)
 	end
 end
 
---- Get a character from the user, and `:edit` that register's path (the key the user presses is considered the register).
+--- Get a character from the user, and consider it the register;
+--- `:edit` the path stored in the register.
 --- If the register doesn't exist / have a path, show a notification with an error message instead.
 function M.default_get()
-	-- when you'll press your remap to get (<Leader>s by default), you'll see "get harp: " in your statusline
-	-- this is just a message to let you know the action you're doing
-	-- you can remove it by specifying an empty string instead (''), or defining your own message that makes more sense to you
 	local register = M.get_char('get harp: ')
-	-- this effectively means that you can press <Escape> to cancel out of this entire function
+	-- this effectively means that you can press <Esc> to cancel out of this entire function
 	if register == nil then return end
 	local path = M.default_get_path(register)
 	if path then
@@ -63,15 +76,14 @@ function M.default_get()
 		-- reasoning? — if something fucked up, your first instinct should be to go execute the same command in your shell to check the actual error message
 		-- so it being handled in your neovim mappings ins't really needed, since the only case that *will*
 		-- constantly happen and isn't considered wrong behavior, is if a harp is empty.
-		-- Once again, feel free to change the message to one that makes more sense to you.
 		vim.notify('harp ' .. register .. ' is empty')
 	end
 end
 
---- Set the path of a default (global) harp.
---- @param register string
---- @param path string
---- @return boolean success
+--- Set the path of a default (global) harp, stored in the `harps` section.
+---@param register string
+---@param path string
+---@return boolean success
 function M.default_set_path(register, path)
 	-- the actual command call will look something like:
 	-- `harp update harps a --path '~/programming/dotfiles/colors.css'`
@@ -81,25 +93,24 @@ function M.default_set_path(register, path)
 	return vim.v.shell_error == 0
 end
 
---- Get a character from the user, and use it as a register name;
+--- Get a character from the user, and consider it the register;
 --- Set the path of that register to be the path to the current buffer.
+--- The path is a full path, with /home/username replaced with ~
+--- You can conveniently get a path like that by using `require('harp').path_get_full_buffer()`
 --- Weirdo "buffers" like manpages work too.
 function M.default_set()
 	local register = M.get_char('set harp: ')
 	if register == nil then return end
-	-- gets the full path of the current buffer.
-	-- however, if it's in your home directory, /home/username will instead be displayed as ~
-	-- /home/username/programming/dotfiles/colors.css → ~/programming/dotfiles/colors.css
-	-- we save a few characters in storage this way
-	local path = vim.fn.expand('%:~')
+	local path = M.path_get_full_buffer()
 	local success = M.default_set_path(register, path)
 	if success then vim.notify('set harp ' .. register) end
 end
 
 --- Get the path of a harp, that's relative to a directory.
---- @param register string
---- @param directory string directory, that the register is relative to.
---- @return string? path of the specified register, or nil if it doesn't exist.
+--- The section the register will belong to, is made by concatenating 'cwd_harps_' and the directory you pass.
+---@param register string
+---@param directory string that the register is relative to.
+---@return string? path of the specified register, or nil if it doesn't exist.
 function M.percwd_get_path(register, directory)
 	-- the way this works, is that we create a new harp section per every different cwd
 	-- so if you make a percwd harp while your cwd is ~/prog/dotfiles (you can check by :pwd),
@@ -114,16 +125,16 @@ function M.percwd_get_path(register, directory)
 	end
 end
 
---- Get a character from the user, and `:edit` that register's path (the key the user presses is considered the register).
+--- Get a character from the user, and consider it the register;
+--- `:edit` the path stored in the register.
+--- The section the register will belong to, is made by concatenating 'cwd_harps_' and your current working directory.
+--- You can conveniently get your current working directory by using `require('harp').path_get_cwd()`
 --- If the register doesn't exist / have a path, show a notification with an error message instead.
 --- This is different from `default_get` in that the register is relative to the current working directory, rather than global.
 function M.percwd_get()
 	local register = M.get_char('get local harp: ')
 	if register == nil then return end
-	local cwd = vim.fn.getcwd()
-	-- if `cwd` has /home/username, that will be replaced with ~
-	-- /home/username/prog/dotfiles → ~/prog/dotfiles
-	cwd = vim.fn.fnamemodify(cwd, ':~')
+	local cwd = M.path_get_cwd()
 	local output = M.percwd_get_path(register, cwd)
 	if output then
 		vim.cmd.edit(output)
@@ -133,41 +144,34 @@ function M.percwd_get()
 end
 
 --- Set the path of a harp, that's relative to `directory` (rather than a global harp).
---- @param register string
---- @param directory string that the register is relative to
---- @param path string
---- @return boolean success
+---@param register string
+---@param directory string that the register is relative to
+---@param path string
+---@return boolean success
 function M.percwd_set_path(register, directory, path)
 	-- the command call ends up looking something like: `harp update 'cwd_harps_~/programming/dotfiles' a --path "astro/lua/lazy_setup.lua"`
 	-- we only store a relative path because we are *already* relative to the correct directory when we call percwd_get, so there's no need to have the full file path (:edit accepts either a full path, or a path relative to cwd )
 	-- so we need to store less characters this way
-	vim.fn.system("harp update 'cwd_harps_" .. cwd .. "' " .. register .. " --path '" .. path .. "'")
+	vim.fn.system("harp update 'cwd_harps_" .. directory .. "' " .. register .. " --path '" .. path .. "'")
 	return vim.v.shell_error == 0
 end
 
---- Get a character from the user, and use it as a register name;
+--- Get a character from the user, and consider it the register;
 --- Set the path of that register.
 --- Different from `default_set` in that the registers are relative to current working directory, rather than being global.
+--- Current working directory is gotten by calling `require('harp').path_get_cwd()`
+--- The path set to the register is the path to the current buffer, gotten by calling `require('harp').path_get_relative_buffer()`
 function M.percwd_set()
 	local register = M.get_char('set local harp: ')
 	if register == nil then return end
-	local cwd = vim.fn.getcwd()
-	cwd = vim.fn.fnamemodify(cwd, ':~')
-	-- this will get us the buffer's path.
-	-- if it's inside of cwd, it will be relative to cwd
-	-- but if it's not, it's a full path that replaces /home/username with ~
-	-- so, if your cwd is ~/prog/dotfiles and the buffer's path is /home/username/dotfiles/awesome/keys.lua
-	-- it will be turned into awesome/keys.lua
-	-- if the buffer's path was /home/username/backup/kitty/kitty.conf (notice, it's not in dotfiles anymore)
-	-- it will be turned into ~/backup/kitty/kitty.conf
-	-- this lets you save storage space in the data file while retaining the ability to store any buffer path
-	local path = vim.fn.expand('%:~:.')
+	local cwd = M.path_get_cwd()
+	local path = M.path_get_relative_buffer()
 	local success = M.percwd_set_path(register, cwd, path)
 	if success then vim.notify('set local harp ' .. register) end
 end
 
---- Get the path of a register in a section that holds directory paths (rather than file paths).
---- @param register string? `nil` if register doesn't exist / doesn't have the path set.
+--- Get the path of a register in a section (called `cd_harps`) that holds directory paths (rather than file paths).
+---@param register string? `nil` if register doesn't exist / doesn't have the path set.
 function M.cd_get_path(register)
 	-- `harp get 'cd_harps' a --path`
 	-- I'm a fish shell user, but `system` still calls commands in bash (if not sh 🤔) fwiw.
@@ -181,11 +185,12 @@ function M.cd_get_path(register)
 end
 
 --- Get a character from the user, and consider it the register;
---- Get the path of that register in the `cd` section, and `:tcd` into it.
+--- Get the path of that register in the `cd_harps` section, and `:tcd` into it.
 --- If the register doesn't exist / have a path, show a notification with an error message instead.
 function M.cd_get()
 	local register = M.get_char('get cd harp: ')
 	if register == nil then return end
+	local output = M.cd_get_path(register)
 	if output then
 		-- we change cwd only for the current tab, so you can easily have a bunch of tabs with diferent cwd
 		-- don't confuse tabs and buffers
@@ -195,10 +200,10 @@ function M.cd_get()
 	end
 end
 
---- Set the path of a `cd` harp, that stores directory paths, rather than file paths.
---- @param register string
---- @param directory string
---- @return boolean success
+--- Set the path of a register located in the `cd_harps` section, that stores directory paths, rather than file paths.
+---@param register string
+---@param directory string
+---@return boolean success
 function M.cd_set_path(register, directory)
 	-- `harp update 'cd_harps' a --path '~/prog/dotfiles'`
 	vim.fn.system("harp update 'cd_harps' " .. register .. " --path '" .. directory .. "'")
@@ -209,19 +214,19 @@ function M.cd_set_path(register, directory)
 	end
 end
 
---- Get a character from the user, and use it as a register name;
---- Set the path of that register in the `cd` section to be your current working directory.
+--- Get a character from the user, and consider it the register;
+--- Set the path of that register in the `cd_harps` section to be your current working directory.
+--- Current working directory is gotten by calling `require('harp').path_get_cwd()`
 --- If everything went correctly, display a notification with a success message.
 function M.cd_set()
 	local register = M.get_char('set cd harp: ')
 	if register == nil then return end
-	local cwd = vim.fn.getcwd()
-	cwd = vim.fn.fnamemodify(cwd, ':~')
+	local cwd = M.path_get_cwd()
 	local success = M.cd_set_path(register, cwd)
 	if success then vim.notify('set cd harp ' .. register) end
 end
 
---- Get the line and column of a register in the section, that is relative to a buffer.
+--- Get the line and column of a register in the section, that is relative to `path`
 ---@param register string
 ---@param path string path to the file, that becomes a part of the section name.
 ---@return table? location with properties line, column. `nil` if section doesn't exist.
@@ -250,7 +255,7 @@ end
 function M.perbuffer_mark_get()
 	local register = M.get_char('get local mark: ')
 	if register == nil then return end
-	local path = vim.fn.expand('%:~')
+	local path = M.path_get_full_buffer()
 	local output = M.perbuffer_mark_get_location(register, path)
 	if output then
 		-- whenever you see `vim.fn`, that means that you can search for the documentation for the next word (in this case, `cursor`) like `:help cursor()`
@@ -261,7 +266,7 @@ function M.perbuffer_mark_get()
 	end
 end
 
---- Set the line and column in a register, that's in a section relative to `path`
+--- Set the line and column in a register, that's in a section relative to the `path`.
 --- Essentially, set a local (perbuffer) mark.
 ---@param register string
 ---@param path string the file path ends up being part of the name of a new section
@@ -287,14 +292,16 @@ function M.perbuffer_mark_set_location(register, path, line, column)
 	end
 end
 
---- Get a character from the user, and consider it the register name;
+--- Get a character from the user, and consider it the register;
 --- Set the line and column properties of the register, to be your current cursor position.
---- This register is in a section, relative to the current buffer.
 --- In other words, set a local (perbuffer) mark.
+--- The section the register is in is created by concatenating `local_marks_` with the buffer path.
+--- So the section name ends up looking something like `local_marks_~/prog/dotfiles/colors.css`
+--- The buffer path is gotten by calling `require('harp').path_get_full_buffer()`
 function M.perbuffer_mark_set()
 	local register = M.get_char('set local mark: ')
 	if register == nil then return end
-	local path = vim.fn.expand('%:~')
+	local path = M.path_get_full_buffer()
 	local cursor = vim.api.nvim_win_get_cursor(0)
 	local line = cursor[1]
 	local column = cursor[2]
@@ -302,7 +309,7 @@ function M.perbuffer_mark_set()
 	if success then vim.notify('set local mark ' .. register) end
 end
 
---- Get the location (path, line, column) of a global mark.
+--- Get the location (path, line, column) of a global mark, stored as a register in the `global_marks` section.
 ---@param register string
 ---@return table? location with properties path, line, column. Or `nil` if register doesn't exist.
 function M.global_mark_get_location(register)
@@ -319,9 +326,9 @@ function M.global_mark_get_location(register)
 	end
 end
 
---- Get a character from the user, and consider it the register name;
---- Go to the position (path, line, column), contained in the register (you "go" by `:edit`ing the file path, and moving the cursor to the correct line and column).
---- If register doesn't exist, show notification with the error message.
+--- Get a character from the user, and consider it the register;
+--- Go to the position (path, line, column) contained in the register (you "go" by `:edit`ing the file path, and moving the cursor to the correct line and column).
+--- If register doesn't exist, show a notification with the error message.
 --- This is effectively a reimplementation of builtin global marks.
 function M.global_mark_get()
 	local register = M.get_char('get global mark: ')
@@ -360,12 +367,16 @@ function M.global_mark_set_location(register, path, line, column)
 	end
 end
 
---- Get a character from the user, and set a global mark, located in that character's register.
+--- Get a character from the user, and consider it the register;
+--- Set a global mark, located in that register.
+--- When setting a global mark, the current buffer path is used,
+--- it is gotten by calling `require('harp').path_get_full_buffer()`
+--- Also, the current line and column are used.
 --- If mark was successfully set, display a notification.
 function M.global_mark_set()
 	local register = M.get_char('set global mark: ')
 	if register == nil then return end
-	local path = vim.fn.expand('%:~')
+	local path = M.path_get_full_buffer()
 	local cursor = vim.api.nvim_win_get_cursor(0)
 	local line = cursor[1]
 	local column = cursor[2]
