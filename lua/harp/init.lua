@@ -40,7 +40,7 @@ function M.path_get_cwd() return vim.fn.fnamemodify(vim.fn.getcwd(), ':~') end
 --- Returns the path to the current buffer.
 --- If it's inside of cwd, it will be relative to cwd.
 --- But if it's not, it's a full path that replaces /home/username with ~
---- So, if your cwd is ~/prog/dotfiles and the buffer's path is /home/username/dotfiles/awesome/keys.lua,
+--- So, if your cwd is ~/prog/dotfiles and the buffer's path is /home/username/prog/dotfiles/awesome/keys.lua,
 --- it will be turned into awesome/keys.lua
 --- If the buffer's path was /home/username/backup/kitty/kitty.conf (notice, it's not in dotfiles anymore),
 --- it will be turned into ~/backup/kitty/kitty.conf

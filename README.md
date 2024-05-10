@@ -160,3 +160,48 @@ vim.keymap.set('n', '<Leader>Z', function() require('harp').cd_set() end)
 Because all of the mappings' right hand sides are `function`s, it makes the plugin automatically lazy load once you try to use one of the mappings.
 
 Feel free to pick different mappings that make more sense in your setup!
+
+## Utility Api
+
+This is an overview of the remaining useful api that harp-nvim provides. For more details, look into the comments in the [source code](./lua/harp/init.lua).
+
+You can use these utility functions along with the `_path` functions to define slightly different behavior for your mappings, if the default mapping functions don't fit your needs perfectly. For example, you could remake harp local marks to only use lowercase letters, and every other letter to be seen as a harp global mark.
+
+```lua
+require('harp').get_char(prompt)
+```
+
+Get a singular key from the user and return it. `nil` if the user presses escape (`<Esc>`).
+Used throughout all the default harp-nvim mapping functions, to make you not have to make a billion separate mappings per every combination, and instead to only have to make one.
+
+```lua
+require('harp').split_by_newlines(string)
+```
+
+Get an array-like table containing each of the lines in a multiline text.
+
+```lua
+require('harp').path_get_full_buffer()
+```
+
+Returns the full path to the current buffer, but replaces `/home/username` with `~`.
+
+`/home/username/prog/dotfiles/colors.css` → `~/prog/dotfiles/colors.css`
+
+```lua
+require('harp').path_get_cwd()
+```
+
+Returns your current working directory, but replaces `/home/username` with `~`.
+
+`/home/username/prog/dotfiles` → `~/prog/dotfiles`
+
+```lua
+require('harp').path_get_relative_buffer()
+```
+
+Returns a path to the current buffer, that _can_ be relative to your current working directory.
+
+For example, if your current working directory is `/home/username/prog/dotfiles` and your current buffer is `/home/username/prog/dotfiles/awesome/keys.lua`, you will get `awesome/keys.lua`. So, it is relative to dotfiles in this case.
+
+However, if the current buffer is the same, but the _current working directory_ is `/home/username/prog/backup` instead, you'd get `~/prog/dotfiles/awesome/keys.lua`. In other words, if your current buffer is **not** inside of your current working directory, you get the full path to the buffer, equivalent to the output of `path_get_full_buffer()`.
