@@ -1,6 +1,6 @@
 # harp.nvim
 
-This plugin uses (and depends on) https://github.com/Axlefublr/harp to make various improvements for file / directory navigation.
+This plugin uses (and depends on) [harp](https://github.com/Axlefublr/harp) to make various improvements for file / directory navigation in neovim.
 
 In this readme you can see an overview of all the features that the plugin provides.
 For more details on the api provided, read the [source code](./lua/harp/init.lua), carefully commented to explain everything.
@@ -111,6 +111,33 @@ require('harp').cd_get_path(register)
 require('harp').cd_set_path(register, directory)
 ```
 
+## Positional harps
+
+This one is the weirdest one, that I find **incredibly** useful regardless.
+
+Think of all the times you create the same file structure in different projects, again and again. Almost every project will have a `.gitignore`. In rust projects, you'll end up wanting to go to `Cargo.toml` or `src/main.rs` very often. Heck, think about the `README.md`!
+
+If you decide to use percwd harps for those, you'll have to set those harps again and again, as you create new projects. Additionally, you also have to go through the hassle of actually _creating_ the files first, and only then making a harp for them to be more accessible.
+
+It's a hassle! Positional harps solve that :D
+
+Positional harps just store the path of the current buffer, relative to your current working directory. Once you've saved one to a register, when you use it, you apply it relative to _whatever the current working directory is_. Let me give an example to clear things up.
+
+Say you're working on a project and your current working directory is `~/prog/proj/harp`. You end up coming back to the readme file again and again, and so you decide to make it a positional harp. While your current buffer is `~/prog/proj/harp/README.md`, it gets saved as just `README.md` to the register of your choice.
+
+Then, you decide to work on a different project and so you've changed your current working directory to `~/prog/proj/ghl`. You also want to edit the readme file there. You can use the register we just saved in harp!
+
+In other words, we save just the path to the current buffer, so that we can use the same path to open relatively to any given cwd we're in. Positional harps exist for the files that appear in the same _project structure_, regardless of the project. While percwd harps are most useful for files that are _unique_ to a given project.
+
+### Related api:
+
+```lua
+require('harp').positional_get()
+require('harp').positional_set()
+require('harp').positional_get_path(register)
+require('harp').positional_set_path(register, path)
+```
+
 ## Installation
 
 With [lazy.nvim](https://github.com/folke/lazy.nvim):
@@ -141,6 +168,9 @@ vim.keymap.set('n', '<Leader>I', function() require('harp').default_set() end)
 
 vim.keymap.set('n', '<Leader>x', function() require('harp').percwd_get() end)
 vim.keymap.set('n', '<Leader>X', function() require('harp').percwd_set() end)
+
+vim.keymap.set('n', '<Leader>r', function() require('harp').positional_get() end)
+vim.keymap.set('n', '<Leader>R', function() require('harp').positional_set() end)
 
 vim.keymap.set('n', "'", function() require('harp').perbuffer_mark_get() end)
 vim.keymap.set('n', 'm', function() require('harp').perbuffer_mark_set() end)
