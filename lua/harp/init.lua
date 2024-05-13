@@ -384,9 +384,63 @@ function M.global_mark_set()
 	if success then vim.notify('set global mark ' .. register) end
 end
 
+--- Get the path of a harp stored in the `positional_harps` section.
+---@param register string
+---@return string? path of the specified register, or nil if it doesn't exist.
+function M.positional_get_path(register)
+	-- `harp get 'positional_harps' 'a' --path`
+	local output = vim.fn.system("harp get 'positional_harps' '" .. register .. "' --path")
+	if vim.v.shell_error == 0 and output then
+		return output
+	else
+		return nil
+	end
+end
+
+--- Get a character from the user, and consider it the register;
+--- `:edit` the path stored in the register.
+--- Positional harps just store the relative path, and don't care about your current working directory (unlike percwd harps).
+--- The effect that gives you, is that you can open the same *position* in the file structure of any project, without having to set all your registers again for the new project (which you'd have to do with percwd harps).
+--- The most useful example of using this, is putting `.gitignore` in a register, to be able to open any project's `.gitignore` quickly in the future.
+--- If the register doesn't exist / have a path, show a notification with an error message instead.
+--- The section that the register will belong to is `positional_harps`.
+function M.positional_get()
+	local register = M.get_char('get positional harp: ')
+	if register == nil then return end
+	local output = M.positional_get_path(register)
+	if output then
+		vim.cmd.edit(output)
+	else
+		vim.notify('positional harp ' .. register .. ' is empty')
+	end
+end
+
+--- Set the path of a harp, that is stored in the `positional_harps` section.
+---@param register string
+---@param path string
+---@return boolean success
+function M.positional_set_path(register, path)
+	-- `harp update 'positional_harps' 'a' --path 'src/main.rs'`
+	vim.fn.system("harp update 'positional_harps' '" .. register .. "' --path '" .. path .. "'")
+	return vim.v.shell_error == 0
+end
+
+--- Get a character from the user, and consider it the register;
+--- Set the path of that register.
+--- The register is stored in the `positional_harps` section.
+--- See comment of `require('harp').positional_get()` to understand how positional harps are different from percwd harps.
+--- The path set to the register is the path to the current buffer, gotten by calling `require('harp').path_get_relative_buffer()`
+function M.positional_set()
+	local register = M.get_char('set positional harp: ')
+	if register == nil then return end
+	local relative_path = M.path_get_relative_buffer()
+	local output = M.positional_set_path(register, relative_path)
+	if output then vim.notify('set positional harp ' .. register) end
+end
+
 function M.setup()
 	if vim.fn.executable('harp') ~= 1 then
-		print('harp-nvim: harp was not found in your path')
+		vim.notify('harp-nvim: harp was not found in your path', 2) -- this *should* display as an ERROR
 		return
 	end
 end
