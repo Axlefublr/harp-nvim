@@ -1,5 +1,9 @@
 local M = {}
 
+---@param cmd table
+---@return vim.SystemCompleted
+local function shell(cmd) return vim.system(cmd, { text = true }):wait() end
+
 --- Get a character from the user, unless they press escape, in which case return nil, usually to cancel whatever action the user wanted to do.
 --- You'll see this function get used throughout most, if not all, default mappings. The reason for it to exist is simply so we don't have to make a billion different mappings per every key.
 ---@param prompt string what text to show when asking the user for the character.
@@ -51,10 +55,9 @@ function M.path_get_relative_buffer() return vim.fn.expand('%:~:.') end
 ---@param register string
 ---@return string? path `nil`, if it doesn't exist in the register.
 function M.default_get_path(register)
-	local output = vim.fn.system("harp get harps '" .. register .. "' --path")
-	-- vim.v.shell_error is set by calling vim.fn.system() — so basically, it's the exit status of the last called shell command
-	if vim.v.shell_error == 0 and output then
-		return output
+	local result = shell({ 'harp', 'get', 'harps', register, '--path' })
+	if result.code == 0 then
+		return result.stdout
 	else
 		return nil
 	end
@@ -85,12 +88,7 @@ end
 ---@param path string
 ---@return boolean success
 function M.default_set_path(register, path)
-	-- the actual command call will look something like:
-	-- `harp update harps a --path '~/programming/dotfiles/colors.css'`
-	-- the reason why I use single quotes for surrounding path, is so that no bash shell expansions happen
-	-- so it's not just a style choice
-	vim.fn.system("harp update harps '" .. register .. "' --path '" .. path .. "'")
-	return vim.v.shell_error == 0
+	return shell({ 'harp', 'update', 'harps', register, '--path', path }).code == 0
 end
 
 --- Get a character from the user, and consider it the register;
@@ -115,11 +113,9 @@ function M.percwd_get_path(register, directory)
 	-- the way this works, is that we create a new harp section per every different cwd
 	-- so if you make a percwd harp while your cwd is ~/prog/dotfiles (you can check by :pwd),
 	-- you now have a section called cwd_harps_~/prog/dotfiles
-	-- the command call ends up looking something like this:
-	-- `harp get 'cwd_harps_~/prog/dotfiles' a --path`
-	local output = vim.fn.system("harp get 'cwd_harps_" .. directory .. "' " .. register .. ' --path')
-	if vim.v.shell_error == 0 and output then
-		return output
+	local result = shell({ 'harp', 'get', 'cwd_harps_' .. directory, register, '--path' })
+	if result.code == 0 then
+		return result.stdout
 	else
 		return nil
 	end
@@ -149,11 +145,9 @@ end
 ---@param path string
 ---@return boolean success
 function M.percwd_set_path(register, directory, path)
-	-- the command call ends up looking something like: `harp update 'cwd_harps_~/programming/dotfiles' a --path "astro/lua/lazy_setup.lua"`
 	-- we only store a relative path because we are *already* relative to the correct directory when we call percwd_get, so there's no need to have the full file path (:edit accepts either a full path, or a path relative to cwd )
 	-- so we need to store less characters this way
-	vim.fn.system("harp update 'cwd_harps_" .. directory .. "' " .. register .. " --path '" .. path .. "'")
-	return vim.v.shell_error == 0
+	return shell({ 'harp', 'update', 'cwd_harps_' .. directory, register, '--path', path }).code == 0
 end
 
 --- Get a character from the user, and consider it the register;
@@ -173,12 +167,9 @@ end
 --- Get the path of a register in a section (called `cd_harps`) that holds directory paths (rather than file paths).
 ---@param register string? `nil` if register doesn't exist / doesn't have the path set.
 function M.cd_get_path(register)
-	-- `harp get 'cd_harps' a --path`
-	-- I'm a fish shell user, but `system` still calls commands in bash (if not sh 🤔) fwiw.
-	-- It doesn't particularly matter here, just thought it was useful information.
-	local output = vim.fn.system("harp get 'cd_harps' " .. register .. ' --path')
-	if vim.v.shell_error == 0 and output then
-		return output
+	local result = shell({ 'harp', 'get', 'cd_harps', register, '--path' })
+	if result.code == 0 then
+		return result.stdout
 	else
 		return nil
 	end
@@ -205,13 +196,7 @@ end
 ---@param directory string
 ---@return boolean success
 function M.cd_set_path(register, directory)
-	-- `harp update 'cd_harps' a --path '~/prog/dotfiles'`
-	vim.fn.system("harp update 'cd_harps' " .. register .. " --path '" .. directory .. "'")
-	if vim.v.shell_error == 0 then
-		return true
-	else
-		return false
-	end
+	return shell({ 'harp', 'update', 'cd_harps', register, '--path', directory }).code == 0
 end
 
 --- Get a character from the user, and consider it the register;
@@ -231,15 +216,14 @@ end
 ---@param path string path to the file, that becomes a part of the section name.
 ---@return table? location with properties line, column. `nil` if section doesn't exist.
 function M.perbuffer_mark_get_location(register, path)
-	-- `harp get 'local_marks_~/prog/dotfiles/colors.css' a --line --column`
 	-- since these registers are per *buffer* locations, we don't need to go to any other file when we call this function
 	-- all we need to do is move the cursor to the correct line and column
 	-- that means that we don't need to store the filepath in the register, only in the section
-	local output = vim.fn.system("harp get 'local_marks_" .. path .. "' " .. register .. ' --line --column')
+	local result = shell({ 'harp', 'get', 'local_marks_' .. path, register, '--line', '--column' })
 	-- we could instead just call harp twice and not have to split the output by newlines, but that would be slower
 	-- probably not noticeably slower, but technically bad
-	if vim.v.shell_error == 0 and output then
-		local lines = M.split_by_newlines(output)
+	if result.code == 0 then
+		local lines = M.split_by_newlines(result.stdout)
 		local line = lines[1]
 		local column = lines[2]
 		return { line = line, column = column }
@@ -274,22 +258,16 @@ end
 ---@param column number
 ---@return boolean success
 function M.perbuffer_mark_set_location(register, path, line, column)
-	-- `harp update 'local_marks_~/prog/dotfiles/colors.css' a --line 23 --column 46`
-	vim.fn.system(
-		"harp update 'local_marks_"
-			.. path
-			.. "' "
-			.. register
-			.. ' --line '
-			.. tostring(line)
-			.. ' --column '
-			.. tostring(column)
-	)
-	if vim.v.shell_error == 0 then
-		return true
-	else
-		return false
-	end
+	return shell({
+		'harp',
+		'update',
+		'local_marks_' .. path,
+		register,
+		'--line',
+		tostring(line),
+		'--column',
+		tostring(column),
+	}).code == 0
 end
 
 --- Get a character from the user, and consider it the register;
@@ -313,10 +291,9 @@ end
 ---@param register string
 ---@return table? location with properties path, line, column. Or `nil` if register doesn't exist.
 function M.global_mark_get_location(register)
-	-- `harp get 'global_marks' a --path --line --column`
-	local output = vim.fn.system("harp get 'global_marks' '" .. register .. "' --path --line --column")
-	if vim.v.shell_error == 0 and output then
-		local lines = M.split_by_newlines(output)
+	local result = shell({ 'harp', 'get', 'global_marks', register, '--path', '--line', '--column' })
+	if result.code == 0 then
+		local lines = M.split_by_newlines(result.stdout)
 		local path = lines[1]
 		local line = lines[2]
 		local column = lines[3]
@@ -349,22 +326,18 @@ end
 ---@param column number
 ---@return boolean success
 function M.global_mark_set_location(register, path, line, column)
-	-- `harp update 'global_marks' a --path '~/prog/dotfiles/colors.css' --line 23 --column 46`
-	vim.fn.system(
-		"harp update 'global_marks' "
-			.. register
-			.. " --path '"
-			.. path
-			.. "' --line "
-			.. tostring(line)
-			.. ' --column '
-			.. tostring(column)
-	)
-	if vim.v.shell_error == 0 then
-		return true
-	else
-		return false
-	end
+	return shell({
+		'harp',
+		'update',
+		'global_marks',
+		register,
+		'--path',
+		path,
+		'--line',
+		tostring(line),
+		'--column',
+		tostring(column),
+	}).code == 0
 end
 
 --- Get a character from the user, and consider it the register;
@@ -388,10 +361,9 @@ end
 ---@param register string
 ---@return string? path of the specified register, or nil if it doesn't exist.
 function M.positional_get_path(register)
-	-- `harp get 'positional_harps' 'a' --path`
-	local output = vim.fn.system("harp get 'positional_harps' '" .. register .. "' --path")
-	if vim.v.shell_error == 0 and output then
-		return output
+	local result = shell({ 'harp', 'get', 'positional_harps', register, '--path' })
+	if result.code == 0 then
+		return result.stdout
 	else
 		return nil
 	end
@@ -420,9 +392,7 @@ end
 ---@param path string
 ---@return boolean success
 function M.positional_set_path(register, path)
-	-- `harp update 'positional_harps' 'a' --path 'src/main.rs'`
-	vim.fn.system("harp update 'positional_harps' '" .. register .. "' --path '" .. path .. "'")
-	return vim.v.shell_error == 0
+	return shell({ 'harp', 'update', 'positional_harps', register, '--path', path }).code == 0
 end
 
 --- Get a character from the user, and consider it the register;
