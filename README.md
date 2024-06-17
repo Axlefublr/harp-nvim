@@ -169,13 +169,32 @@ This is the first `_get()` function that takes arguments. They're explained in t
 
 `at_end` puts the cursor at the end of the match, rather than the start. This is like using the `/e` search offset, but having this as your default might save you two keystrokes. Especially helpful for when you intend to use search harps mostly for their "mark-like" functionality, rather than just registers for searches.
 
+## Global search harps
+
+Like local search harps, but instead of being local to a buffer, are global.
+
+First you jump to a file, and then attempt searching for a pattern. If the register is not set, you are not jumped to the file.
+
+### Related api:
+
+The `_get`'s function's `assume` and `at_end` parameters work like in `perbuffer_search_get`.
+
+Unlike the local variant of search harps, global search harps always search from the top of the file, always restore your previous search, and cannot search backwards.
+
+```lua
+require('harp').global_search_get(assume, at_end)
+require('harp').global_search_set()
+require('harp').global_search_get_location(register)
+require('harp').global_search_set_location(register, path, pattern)
+```
+
 ## Installation
 
 With [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
 {
-	'https://github.com/Thorinori/harp-nvim',
+	'Axlefublr/harp-nvim',
 	lazy = true, -- your mappings will lazy load this plugin automatically. you'll find example mappings below in this readme.
 	opts = {} -- makes sure the setup function is called, even though we don't provide any options so far.
 }
@@ -218,6 +237,8 @@ vim.keymap.set('n', '<Leader>m', function() require('harp').global_mark_set() en
 -- the mishmash of booleans here means: always appear at the end of the match, treat `/e` / `?e` at the end of a search pattern literally, and restore the previous search after using a local search harp
 vim.keymap.set('n', '<Leader>t', function() require('harp').perbuffer_search_get(false, false, true, false, true) end)
 vim.keymap.set('n', '<Leader>T', function() require('harp').perbuffer_search_set() end
+vim.keymap.set('n', '<Leader>v', function() require('harp').global_search_get(false, true) end
+vim.keymap.set('n', '<Leader>V', function() require('harp').global_search_set() end
 
 vim.keymap.set('n', '<Leader>z', function() require('harp').cd_get() end)
 vim.keymap.set('n', '<Leader>Z', function() require('harp').cd_set() end)

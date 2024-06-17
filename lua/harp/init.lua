@@ -21,9 +21,7 @@ end
 --- Split input by lines, get an array-like table with each line.
 ---@param string string
 ---@return table lines
-function M.split_by_newlines(string)
-	return vim.fn.split(string, '\n')
-end
+function M.split_by_newlines(string) return vim.fn.split(string, '\n') end
 
 --- Returns the full path of the current buffer.
 --- However, if it's in your home directory, /home/username will instead be displayed as ~
@@ -417,10 +415,22 @@ function M.perbuffer_search_get_pattern(register, path)
 	end
 end
 
+--- If the last two characters are either `/e` or `?e`, remove them, and return that.
+---@return string
+local function trim_offset(string)
+	function ends_with(string, substring) return string:sub(-#substring + 1) == substring end
+	local search_offset = ends_with(string, '/e') or ends_with(string, '?e')
+	if search_offset then
+		local function trim_last_two_chars(string) return string:sub(1, -3) end
+		string = trim_last_two_chars(string)
+	end
+	return string
+end
+
 --- Get a character from the user, and consider it the register;
 --- Search for the pattern stored in the register, that is in a section that's relative to the current buffer.
 --- If the register / section is empty, displays an error message.
----@param assume boolean? if the pattern ends with `/e` or `?e`, set the `at_end` flag automatically (and remove the).
+---@param assume boolean? if the pattern ends with `/e` or `?e`, set the `at_end` flag automatically (and remove the `/e` / `?e` from the end).
 ---@param from_start boolean? search from the start of the buffer, rather than from the current cursor position. this will move you to the start of the file, regardless of whether the pattern matches (but won't if the register / section doesn't exist). this is useful for when you want to use search harps as smarter local marks, rather than as registers for search patterns.
 ---@param restore boolean? after using the search pattern, restore the previous one. say you searched for 'alisa', then used a search harp. with the flag off, when you press `n`, you would continue searching for the pattern in the search harp. with this flag on, you would continue searching for 'alisa'.
 ---@param backwards boolean? specify `true` to search backwards, instead of forwards. you don't have to pass this argument at all, if you want to search forwards (in other words, it's the default behavior).
@@ -434,12 +444,11 @@ function M.perbuffer_search_get(assume, from_start, restore, backwards, at_end)
 		local flags = ''
 		if backwards then flags = flags .. 'b' end
 
-		function ends_with(string, substring) return string:sub(-#substring + 1) == substring end
-		local search_offset = (assume and (ends_with(pattern, '/e') or ends_with(pattern, '?e')))
-		if search_offset then
-			local function trim_offset(string) return string:sub(1, -3) end
+		local old_pattern = pattern
+		if assume then
 			pattern = trim_offset(pattern)
 		end
+		local search_offset = assume and pattern ~= old_pattern
 
 		if at_end or search_offset then flags = flags .. 'e' end
 
@@ -473,6 +482,87 @@ function M.perbuffer_search_set()
 	local pattern = vim.fn.getreg('/')
 	local success = M.perbuffer_search_set_pattern(register, path, pattern)
 	if success then vim.notify('set local search harp ' .. register) end
+end
+
+local global_search_harp_delimiter = '\127' -- literal DEL character
+
+--- Split by the literal DEL character
+---@return table with properties path, pattern.
+local function split_by_del(string)
+	local ends_with_del = false
+	if string:sub(-1) == global_search_harp_delimiter then ends_with_del = true end
+	local thingies = vim.fn.split(string, global_search_harp_delimiter)
+	local path = table.remove(thingies, 1)
+	local pattern = vim.fn.join(thingies, global_search_harp_delimiter)
+	if ends_with_del then pattern = pattern .. global_search_harp_delimiter end -- I'm not even sure why I'm bothering, but the one singular person that really wanted to have the literal delete unprintable character at the end of their search pattern won't complain, at least
+	return { path = path, pattern = pattern }
+end
+
+--- Get the path and pattern of a global search harp, stored in a register in the `search` section.
+---@param register string
+---@return table? location with properties path, pattern. Or `nil` if register doesn't exist.
+function M.global_search_get_location(register)
+	local result = shell({ 'harp', 'get', 'search', register, '--path' })
+	if result.code == 0 then
+		return split_by_del(result.stdout)
+	else
+		return nil
+	end
+end
+
+--- Get a character from the user, and consider it the register;
+--- First, go to the file stored in the register, and search (from the top of the file) for the pattern stored in the register. (you "go" by `:edit`ing the file path, and doing `vim.fn.search()` using the pattern) After the search, restore your previous search pattern that you had before using the global search harp.
+--- If register doesn't exist, show a notification with the error message.
+---@param assume boolean? if the pattern ends with `/e` or `?e`, set the `at_end` flag automatically (and remove the `/e` / `?e` from the end).
+---@param at_end boolean? when searching, put the cursor at the end of the match, rather than at the start. this is like using the `/e` / `?e` search offset (:h search-offset / https://youtu.be/GP722zVGYAk for a tutorial on them)
+function M.global_search_get(assume, at_end)
+	local register = M.get_char('get global search harp: ')
+	if register == nil then return end
+	local output = M.global_search_get_location(register)
+	if not output then
+		vim.notify('global search harp ' .. register .. ' is empty')
+		return
+	end
+	vim.cmd.edit(output.path)
+
+	local flags = 'c'
+	local pattern = output.pattern
+
+	local old_pattern = pattern
+	if assume then
+		pattern = trim_offset(pattern)
+	end
+	local search_offset = assume and pattern ~= old_pattern
+
+	if at_end or search_offset then flags = flags .. 'e' end
+
+	local prev_search = vim.fn.getreg('/')
+	vim.fn.cursor(1, 1)
+	vim.fn.search(pattern, flags)
+	vim.fn.setreg('/', prev_search)
+end
+
+--- Set the path and pattern of a register in the `search` section.
+---@param register string
+---@param path string
+---@param pattern string
+---@return boolean success
+function M.global_search_set_location(register, path, pattern)
+	return shell({ 'harp', 'update', 'search', register, '--path', path .. global_search_harp_delimiter .. pattern }).code == 0
+end
+
+--- Get a character from the user, and consider it the register;
+--- Set a global search harp, located in that register.
+--- You set the path to be the current buffer path (it is gotten by calling `require('harp').path_get_full_buffer()`)
+--- And you set the pattern to be the latest search pattern (it's located in the `/` vim register).
+--- If the global search harp was successfully set, display a notification.
+function M.global_search_set()
+	local register = M.get_char('set global search harp: ')
+	if register == nil then return end
+	local path = M.path_get_full_buffer()
+	local pattern = vim.fn.getreg('/')
+	local success = M.global_search_set_location(register, path, pattern)
+	if success then vim.notify('set global search harp ' .. register) end
 end
 
 function M.setup()
