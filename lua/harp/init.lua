@@ -445,7 +445,7 @@ function M.perbuffer_search_get(assume, from_start, restore, backwards, at_end)
 
 		local prev_search = nil
 		if restore then prev_search = vim.fn.getreg('/') end
-		if from_start then vim.fn.cursor(0, 0) end
+		if from_start then vim.fn.cursor(1, 1) end
 		vim.fn.search(pattern, flags)
 		if restore then vim.fn.setreg('/', prev_search) end
 	end
