@@ -22,11 +22,7 @@ end
 ---@param string string
 ---@return table lines
 function M.split_by_newlines(string)
-	local lines = {}
-	for line in string.gmatch(string, '([^\n]+)') do
-		table.insert(lines, line)
-	end
-	return lines
+	return vim.fn.split(string, '\n')
 end
 
 --- Returns the full path of the current buffer.
