@@ -88,7 +88,7 @@ end
 ---@param path string
 ---@return boolean success
 function M.default_set_path(register, path)
-	return shell({ 'harp', 'update', 'harps', register, '--path', path }).code == 0
+	return shell({ 'harp', 'update', 'harps', register, '--path', '--', path }).code == 0
 end
 
 --- Get a character from the user, and consider it the register;
@@ -406,6 +406,77 @@ function M.positional_set()
 	local relative_path = M.path_get_relative_buffer()
 	local output = M.positional_set_path(register, relative_path)
 	if output then vim.notify('set positional harp ' .. register) end
+end
+
+--- Get the search pattern of a register in the section, that is relative to `path`
+---@param register string
+---@param path string path to the file, that becomes a part of the section name.
+---@return string? pattern `nil` if section doesn't exist.
+function M.perbuffer_search_get_pattern(register, path)
+	local result = shell({ 'harp', 'get', 'local_search_' .. path, register, '--path' })
+	if result.code == 0 then
+		return result.stdout
+	else
+		return nil
+	end
+end
+
+--- Get a character from the user, and consider it the register;
+--- Search for the pattern stored in the register, that is in a section that's relative to the current buffer.
+--- If the register / section is empty, displays an error message.
+---@param assume boolean? if the pattern ends with `/e` or `?e`, set the `at_end` flag automatically (and remove the).
+---@param from_start boolean? search from the start of the buffer, rather than from the current cursor position. this will move you to the start of the file, regardless of whether the pattern matches (but won't if the register / section doesn't exist). this is useful for when you want to use search harps as smarter local marks, rather than as registers for search patterns.
+---@param restore boolean? after using the search pattern, restore the previous one. say you searched for 'alisa', then used a search harp. with the flag off, when you press `n`, you would continue searching for the pattern in the search harp. with this flag on, you would continue searching for 'alisa'.
+---@param backwards boolean? specify `true` to search backwards, instead of forwards. you don't have to pass this argument at all, if you want to search forwards (in other words, it's the default behavior).
+---@param at_end boolean? when searching, put the cursor at the end of the match, rather than at the start. this is like using the `/e` / `?e` search offset (:h search-offset / https://youtu.be/GP722zVGYAk for a tutorial on them)
+function M.perbuffer_search_get(assume, from_start, restore, backwards, at_end)
+	local register = M.get_char('get local search harp: ')
+	if register == nil then return end
+	local cur_buf_path = M.path_get_full_buffer()
+	local pattern = M.perbuffer_search_get_pattern(register, cur_buf_path)
+	if pattern then
+		local flags = ''
+		if backwards then flags = flags .. 'b' end
+
+		function ends_with(string, substring) return string:sub(-#substring + 1) == substring end
+		local search_offset = (assume and (ends_with(pattern, '/e') or ends_with(pattern, '?e')))
+		if search_offset then
+			local function trim_offset(string) return string:sub(1, -3) end
+			pattern = trim_offset(pattern)
+		end
+
+		if at_end or search_offset then flags = flags .. 'e' end
+
+		local prev_search = nil
+		if restore then prev_search = vim.fn.getreg('/') end
+		if from_start then vim.fn.cursor(0, 0) end
+		vim.fn.search(pattern, flags)
+		if restore then vim.fn.setreg('/', prev_search) end
+	end
+end
+
+--- Set the pattern in a register, that's in a section relative to the `path`
+--- In other words, a search harp.
+---@param register string
+---@param path string the file path ends up being part of the name of a new section.
+---@param pattern string a vim pattern, that you would use in `/` or `:s` etc. it is later used in vim.fn.search(), so take that into account when adding patterns using this function.
+---@return boolean success
+function M.perbuffer_search_set_pattern(register, path, pattern)
+	return shell({ 'harp', 'update', 'local_search_' .. path, register, '--path', pattern }).code == 0
+end
+
+--- Get a character from the user, and consider it the register;
+--- Set the path property of the register, to be the last search pattern (it's stored in your `/` vim register)
+--- The section that the register is in is created by concatenating `local_search_` with the buffer path.
+--- So the section name ends up looking something like `local_search_~/prog/dotfiles/colors.css`
+--- The buffer path is gotten by calling `require('harp').path_get_full_buffer()`
+function M.perbuffer_search_set()
+	local register = M.get_char('set local search harp: ')
+	if register == nil then return end
+	local path = M.path_get_full_buffer()
+	local pattern = vim.fn.getreg('/')
+	local success = M.perbuffer_search_set_pattern(register, path, pattern)
+	if success then vim.notify('set local search harp ' .. register) end
 end
 
 function M.setup()

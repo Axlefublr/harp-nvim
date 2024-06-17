@@ -138,6 +138,37 @@ require('harp').positional_get_path(register)
 require('harp').positional_set_path(register, path)
 ```
 
+## Local search harps
+
+The issue with marks, whether global or local, is that they can be invalidated. Invalidated simply because you moved some text around, and now the mark that you used to have points to the wrong place.
+
+Search harps let you search for something, and save that search. Then, you can search for that saved search.
+
+The workflow I had in mind when coming up with the feature is this: you have some section of your code that you want to be able to easily jump to. You search for it so that the search is unique. Now when you save that search, you have an ability to jump to that place even if it moves.
+
+In other words, marks are best for when the position doesn't change (often) — setting a mark is going to be faster, because it just takes your position. Search harps are for when a position may move — you have to first make a search to set the harp, which is slower than setting a mark, but you get the benefit in that it will stay valid forever / longer.
+
+### Related api:
+
+```lua
+require('harp').perbuffer_search_get(assume, from_start, restore, backwards, at_end)
+require('harp').perbuffer_search_set()
+require('harp').perbuffer_search_get_pattern(register, path)
+require('harp').perbuffer_search_set_pattern(register, path, pattern)
+```
+
+This is the first `_get()` function that takes arguments. They're explained in the source code, but I'll still go over them here. If you don't pass any of them, all of them will be disabled. If you want to set some option in the middle, but not the preceeding once, do something like this: `(nil, nil, true)`. The arguments are not an opts table instead because I believe it would be more confusing to a more beginner nvim plugin configurator.
+
+`assume` treats `/e` / `?e` at the end of the search pattern as a `:h search-offset`. Unfortunately only those are supported. The usual `+n` / `-n` after the search offset, and things like `/s` are not supported. By default (when `nil`), `/e` and `?e` at the end of a pattern are treated literally.
+
+`from_start` searches from the start of the file, instead of from the current cursor position. Keep in mind, if the pattern does exist in the given register but a match was not found, you still will be moved to the start of the file.
+
+`restore` the previous search. Say you searched for 'alisa', then used a search harp. With the flag off, when you press `n`, you would continue searching for the pattern in the search harp. With this flag on, you would continue searching for 'alisa'.
+
+`backwards` search backwards, instead of forwards.
+
+`at_end` puts the cursor at the end of the match, rather than the start. This is like using the `/e` search offset, but having this as your default might save you two keystrokes. Especially helpful for when you intend to use search harps mostly for their "mark-like" functionality, rather than just registers for searches.
+
 ## Installation
 
 With [lazy.nvim](https://github.com/folke/lazy.nvim):
@@ -183,6 +214,11 @@ vim.keymap.set('n', "'^", "'^")
 
 vim.keymap.set('n', "<Leader>'", function() require('harp').global_mark_get() end)
 vim.keymap.set('n', '<Leader>m', function() require('harp').global_mark_set() end)
+
+-- the mishmash of booleans here means: always appear at the end of the match, treat `/e` / `?e` at the end of a search pattern literally, and restore the previous search after using a local search harp
+vim.keymap.set('n', '<Leader>t', function() require('harp').perbuffer_search_get(false, false, true, false, true) end)
+vim.keymap.set('n', '<Leader>T', function() require('harp').perbuffer_search_set() end
+
 vim.keymap.set('n', '<Leader>z', function() require('harp').cd_get() end)
 vim.keymap.set('n', '<Leader>Z', function() require('harp').cd_set() end)
 ```
