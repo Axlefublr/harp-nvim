@@ -269,14 +269,14 @@ The second two functions exist to give you a way to access the feature more dire
 ### Suggested mappings
 
 ```lua
-vim.keymap.set('n', '<Leader>i', function() require('harp').default_get() end)
-vim.keymap.set('n', '<Leader>I', function() require('harp').default_set() end)
+vim.keymap.set('n', '<Leader>ss', function() require('harp').default_get() end)
+vim.keymap.set('n', '<Leader>Ss', function() require('harp').default_set() end)
 
-vim.keymap.set('n', '<Leader>x', function() require('harp').percwd_get() end)
-vim.keymap.set('n', '<Leader>X', function() require('harp').percwd_set() end)
+vim.keymap.set('n', '<Leader>sa', function() require('harp').percwd_get() end)
+vim.keymap.set('n', '<Leader>Sa', function() require('harp').percwd_set() end)
 
-vim.keymap.set('n', '<Leader>r', function() require('harp').positional_get() end)
-vim.keymap.set('n', '<Leader>R', function() require('harp').positional_set() end)
+vim.keymap.set('n', '<Leader>sr', function() require('harp').positional_get() end)
+vim.keymap.set('n', '<Leader>Sr', function() require('harp').positional_set() end)
 
 vim.keymap.set('n', "'", function() require('harp').perbuffer_mark_get() end)
 vim.keymap.set('n', 'm', function() require('harp').perbuffer_mark_set() end)
@@ -291,16 +291,17 @@ vim.keymap.set('n', "<Leader>'", function() require('harp').global_mark_get() en
 vim.keymap.set('n', '<Leader>m', function() require('harp').global_mark_set() end)
 
 -- the mishmash of booleans here means: always appear at the end of the match, treat `/e` / `?e` at the end of a search pattern literally, and restore the previous search after using a local search harp
-vim.keymap.set('n', '<Leader>t', function() require('harp').perbuffer_search_get({ assume = true }) end)
-vim.keymap.set('n', '<Leader>T', function() require('harp').perbuffer_search_set() end
-vim.keymap.set('n', '<Leader>/', function() require('harp').filetype_search_get({ assume = true }) end)
-vim.keymap.set('n', '<Leader>?', function() require('harp').filetype_search_get({ assume = true, backwards = true }) end)
-vim.keymap.set('n', '<Leader><Leader>/', function() require('harp').filetype_search_set() end)
-vim.keymap.set('n', '<Leader>v', function() require('harp').global_search_get(false, true) end
-vim.keymap.set('n', '<Leader>V', function() require('harp').global_search_set() end
+vim.keymap.set('n', '<Leader>s/', function() require('harp').perbuffer_search_get({ assume = true }) end)
+vim.keymap.set('n', '<Leader>s?', function() require('harp').perbuffer_search_get({ assume = true, backwards = true }) end)
+vim.keymap.set('n', '<Leader>S/', function() require('harp').perbuffer_search_set() end
+vim.keymap.set('n', '<Leader>sf', function() require('harp').filetype_search_get({ assume = true }) end)
+vim.keymap.set('n', '<Leader>sF', function() require('harp').filetype_search_get({ assume = true, backwards = true }) end)
+vim.keymap.set('n', '<Leader>Sf', function() require('harp').filetype_search_set() end)
+vim.keymap.set('n', '<Leader>sc', function() require('harp').global_search_get(false, true) end
+vim.keymap.set('n', '<Leader>Sc', function() require('harp').global_search_set() end
 
-vim.keymap.set('n', '<Leader>z', function() require('harp').cd_get() end)
-vim.keymap.set('n', '<Leader>Z', function() require('harp').cd_set() end)
+vim.keymap.set('n', '<Leader>sd', function() require('harp').cd_get() end)
+vim.keymap.set('n', '<Leader>Sd', function() require('harp').cd_set() end)
 ```
 
 Because all of the mappings' right hand sides are `function`s, it makes the plugin automatically lazy load once you try to use one of the mappings.
