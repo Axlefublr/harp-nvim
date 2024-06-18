@@ -188,6 +188,50 @@ require('harp').global_search_get_location(register)
 require('harp').global_search_set_location(register, path, pattern)
 ```
 
+## Filetype search harps
+
+Instead of being relative to a buffer, they are relative to a filetype.
+
+This way, you can effectively create arbitrary text objects per-language.
+
+For example, I commonly want to jump and change over a rust function return type.
+
+```rust
+fn func(args) -> Result<(), Box<dyn Error>> {
+	// code
+}
+```
+
+Usually, it's pretty annoying. First, how do I get to the return type itself? Usually, I just scroll and use relative line jumping, but let's say I do the more smart thing and search for `->`. Then I need to `w` to end up on the actual return type. What then? Now to change over it, I could do:
+
+1. `ct{` — that is a pretty good solution that I end up using, but it's annoying how it takes the space before the `{`
+2. `cf>` — may sometimes work, but in the example above, it would need to be `c2f>`. And then, it might be 3 or 4 or whatever else! At which point it's too much counting to use comfortably.
+3. `ct ` — can sometimes work, for types that don't take multiple generic arguments.
+
+All of these solutions kinda suck ass. With filetype search harps, I can first search for this pattern: ` -> \zs.*\ze {` and now, I go directly to the return type, and *also* have it as my latest search (if you keep the `restore` option off).
+
+> `\zs` and `\ze` are probably the most useful vim regex thing you didn't know about. They let you completely circumvent having to use lookahead / lookbehinds, and are way simpler conceptually. I heavily recommend reading about them: `:h /\zs`, `:h /\ze` — they will massively improve your experience of using search harps (as well as usual searches / `:s` command / etc).
+
+What this means is that now, I have the text object for the return type, and can access it with `gn`. So to finally change over the return type, I'd just do `cgn`.
+
+The benefit of using ft search harps over *actual* text objects:
+
+1. Treesitter text objects specifically (in my experience) are hilariously slow. Searches aren't.
+2. You don't have to spend time searching for plugins to get your hyperspecific text object.
+3. You get to implement your own text objects, however specific they may be (this comes in hand with the previous point). As long as you can make up a vim regex pattern that catches what you're looking for, you get both the actions of "go to next / previous [blank]" and "act on this area" (meaning, text object, available through `gn`).
+4. Installing a plugin or adding a text object in your configuration requires you to restart nvim to actually get the feature. With harp, you can set harps on the go, including search harps. So if you have some text object that would be really useful that you realize you want, you can just quickly make it into a ft search harp (or a buffer-local search harp, actually, depends on if it's language specifc or file specific) and then use it to finish your task. In the future, you can either continue using it or forget about it / override it with another pattern.
+
+Don't get me wrong, if you want a text object for something as common as "value", "function", "argument", etc — there are plugins for that sort of thing, and you probably should be using them for that functionality (their matching is likely better than any vim regex pattern either you or me can ever come up with). But for something like "the keyword `local` but only if it's on the start of the line and is preceeded by a function definition" — yeah, that's a job for a search harp.
+
+### Related api:
+
+```lua
+require('harp').filetype_search_get(assume, from_start, restore, backwards, at_end)
+require('harp').filetype_search_set()
+require('harp').filetype_search_get_pattern(register, filetype)
+require('harp').filetype_search_set_pattern(register, filetype, pattern)
+```
+
 ## Installation
 
 With [lazy.nvim](https://github.com/folke/lazy.nvim):
@@ -237,6 +281,9 @@ vim.keymap.set('n', '<Leader>m', function() require('harp').global_mark_set() en
 -- the mishmash of booleans here means: always appear at the end of the match, treat `/e` / `?e` at the end of a search pattern literally, and restore the previous search after using a local search harp
 vim.keymap.set('n', '<Leader>t', function() require('harp').perbuffer_search_get(false, false, true, false, true) end)
 vim.keymap.set('n', '<Leader>T', function() require('harp').perbuffer_search_set() end
+vim.keymap.set('n', '<Leader>/', function() require('harp').filetype_search_get(true, false, false, false, false) end)
+vim.keymap.set('n', '<Leader>?', function() require('harp').filetype_search_get(true, false, false, true, false) end)
+vim.keymap.set('n', '<Leader><Leader>/', function() require('harp').filetype_search_set() end)
 vim.keymap.set('n', '<Leader>v', function() require('harp').global_search_get(false, true) end
 vim.keymap.set('n', '<Leader>V', function() require('harp').global_search_set() end
 
