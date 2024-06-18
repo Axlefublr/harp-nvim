@@ -152,28 +152,19 @@ In other words, marks are best for when the position doesn't change (often) — 
 
 ```lua
 require('harp').perbuffer_search_get(opts = {
-	assume = false,
 	from_start = false,
-	restore = false,
 	backwards = false,
-	at_end = false
 })
 require('harp').perbuffer_search_set()
 require('harp').perbuffer_search_get_pattern(register, path)
 require('harp').perbuffer_search_set_pattern(register, path, pattern)
 ```
 
-This is the first `_get()` function that takes arguments. They're explained in the source code, but I'll still go over them here. If you don't pass the opts table at all, all of the options will be disabled.
-
-`assume` treats `/e` / `?e` at the end of the search pattern as a `:h search-offset`. Unfortunately only those are supported. The usual `+n` / `-n` after the search offset, and things like `/s` are not supported. By default (when `nil`), `/e` and `?e` at the end of a pattern are treated literally.
+This is the first `_get()` function that takes an opts table. If you don't pass the opts table at all, all of the options will be disabled.
 
 `from_start` searches from the start of the file, instead of from the current cursor position. Keep in mind, if the pattern does exist in the given register but a match was not found, you still will be moved to the start of the file.
 
-`restore` the previous search. Say you searched for 'alisa', then used a search harp. With the flag off, when you press `n`, you would continue searching for the pattern in the search harp. With this flag on, you would continue searching for 'alisa'.
-
 `backwards` search backwards, instead of forwards.
-
-`at_end` puts the cursor at the end of the match, rather than the start. This is like using the `/e` search offset, but having this as your default might save you two keystrokes. Especially helpful for when you intend to use search harps mostly for their "mark-like" functionality, rather than just registers for searches.
 
 ## Global search harps
 
@@ -183,12 +174,10 @@ First you jump to a file, and then attempt searching for a pattern. If the regis
 
 ### Related api:
 
-The `_get`'s function's `assume` and `at_end` parameters work like in `perbuffer_search_get`.
-
-Unlike the local variant of search harps, global search harps always search from the top of the file, always restore your previous search, and cannot search backwards.
+Unlike the local variant of search harps, global search harps always search from the top of the file and cannot search backwards. This is not a technical limitation, I don't think that's useful design: you're supposed to use these to go to a specific place, so inconsistencies like cursor position and directions don't help that.
 
 ```lua
-require('harp').global_search_get(assume, at_end)
+require('harp').global_search_get()
 require('harp').global_search_set()
 require('harp').global_search_get_location(register)
 require('harp').global_search_set_location(register, path, pattern)
@@ -233,11 +222,8 @@ Don't get me wrong, if you want a text object for something as common as "value"
 
 ```lua
 require('harp').filetype_search_get(opts = {
-	assume = false,
 	from_start = false,
-	restore = false,
 	backwards = false,
-	at_end = false
 })
 require('harp').filetype_search_set()
 require('harp').filetype_search_get_pattern(register, filetype)
@@ -290,12 +276,11 @@ vim.keymap.set('n', "'^", "'^")
 vim.keymap.set('n', "<Leader>'", function() require('harp').global_mark_get() end)
 vim.keymap.set('n', '<Leader>m', function() require('harp').global_mark_set() end)
 
--- the mishmash of booleans here means: always appear at the end of the match, treat `/e` / `?e` at the end of a search pattern literally, and restore the previous search after using a local search harp
-vim.keymap.set('n', '<Leader>s/', function() require('harp').perbuffer_search_get({ assume = true }) end)
-vim.keymap.set('n', '<Leader>s?', function() require('harp').perbuffer_search_get({ assume = true, backwards = true }) end)
+vim.keymap.set('n', '<Leader>s/', function() require('harp').perbuffer_search_get() end)
+vim.keymap.set('n', '<Leader>s?', function() require('harp').perbuffer_search_get({ backwards = true }) end)
 vim.keymap.set('n', '<Leader>S/', function() require('harp').perbuffer_search_set() end
-vim.keymap.set('n', '<Leader>sf', function() require('harp').filetype_search_get({ assume = true }) end)
-vim.keymap.set('n', '<Leader>sF', function() require('harp').filetype_search_get({ assume = true, backwards = true }) end)
+vim.keymap.set('n', '<Leader>sf', function() require('harp').filetype_search_get() end)
+vim.keymap.set('n', '<Leader>sF', function() require('harp').filetype_search_get({ backwards = true }) end)
 vim.keymap.set('n', '<Leader>Sf', function() require('harp').filetype_search_set() end)
 vim.keymap.set('n', '<Leader>sc', function() require('harp').global_search_get(false, true) end
 vim.keymap.set('n', '<Leader>Sc', function() require('harp').global_search_set() end

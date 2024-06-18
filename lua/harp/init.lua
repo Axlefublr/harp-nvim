@@ -402,18 +402,6 @@ function M.positional_set()
 	if output then vim.notify('set positional harp ' .. register) end
 end
 
---- If the last two characters are either `/e` or `?e`, remove them, and return that.
----@return string
-local function trim_offset(string)
-	local function ends_with(string, substring) return string:sub(-#substring + 1) == substring end
-	local search_offset = ends_with(string, '/e') or ends_with(string, '?e')
-	if search_offset then
-		local function trim_last_two_chars(string) return string:sub(1, -3) end
-		string = trim_last_two_chars(string)
-	end
-	return string
-end
-
 --- Get the search pattern of a register in the section, that is relative to `path`
 ---@param register string
 ---@param path string path to the file, that becomes a part of the section name.
@@ -430,17 +418,15 @@ end
 --- Get a character from the user, and consider it the register;
 --- Search for the pattern stored in the register, that is in a section that's relative to the current buffer.
 --- If the register / section is empty, displays an error message.
----@param assume boolean? if the pattern ends with `/e` or `?e`, set the `at_end` flag automatically (and remove the `/e` / `?e` from the end).
 ---@param from_start boolean? search from the start of the buffer, rather than from the current cursor position. this will move you to the start of the file, regardless of whether the pattern matches (but won't if the register / section doesn't exist). this is useful for when you want to use search harps as smarter local marks, rather than as registers for search patterns.
----@param restore boolean? after using the search pattern, restore the previous one. say you searched for 'alisa', then used a search harp. with the flag off, when you press `n`, you would continue searching for the pattern in the search harp. with this flag on, you would continue searching for 'alisa'.
 ---@param backwards boolean? specify `true` to search backwards, instead of forwards. you don't have to pass this argument at all, if you want to search forwards (in other words, it's the default behavior).
----@param at_end boolean? when searching, put the cursor at the end of the match, rather than at the start. this is like using the `/e` / `?e` search offset (:h search-offset / https://youtu.be/GP722zVGYAk for a tutorial on them)
+---@param touch boolean? the search harp will change your `/` register, so the next time you press `n`, you'll search for the harp's pattern, rather than the pattern you had before.
+---@param at_end boolean? put the cursor at the end of a match, rather than the start.
 ---@param opts table?
 function M.perbuffer_search_get(opts)
-	local assume = opts and opts.assume or nil
 	local from_start = opts and opts.from_start or nil
-	local restore = opts and opts.restore or nil
 	local backwards = opts and opts.backwards or nil
+	local touch = opts and opts.touch or nil
 	local at_end = opts and opts.at_end or nil
 
 	local register = M.get_char('get local search harp: ')
@@ -451,24 +437,19 @@ function M.perbuffer_search_get(opts)
 		vim.notify('local search harp ' .. register .. ' is empty')
 		return
 	end
+
+	if from_start then vim.fn.cursor(1, 1) end
+
 	local flags = ''
+	if at_end then flags = 'e' end
 	if backwards then flags = flags .. 'b' end
 
-	local old_pattern = pattern
-	if assume then pattern = trim_offset(pattern) end
-	local search_offset = assume and pattern ~= old_pattern
-
-	if at_end or search_offset then flags = flags .. 'e' end
-
-	local prev_search = nil
-	if restore then prev_search = vim.fn.getreg('/') end
-	if from_start then vim.fn.cursor(1, 1) end
+	if touch then vim.fn.setreg('/', pattern) end
 	vim.fn.search(pattern, flags)
-	if restore then vim.fn.setreg('/', prev_search) end
 end
 
 --- Set the pattern in a register, that's in a section relative to the `path`
---- In other words, a search harp.
+--- In other words, a local search harp.
 ---@param register string
 ---@param path string the file path ends up being part of the name of a new section.
 ---@param pattern string a vim pattern, that you would use in `/` or `:s` etc. it is later used in vim.fn.search(), so take that into account when adding patterns using this function.
@@ -518,11 +499,12 @@ function M.global_search_get_location(register)
 end
 
 --- Get a character from the user, and consider it the register;
---- First, go to the file stored in the register, and search (from the top of the file) for the pattern stored in the register. (you "go" by `:edit`ing the file path, and doing `vim.fn.search()` using the pattern) After the search, restore your previous search pattern that you had before using the global search harp.
+--- First, go to the file stored in the register, and search (from the top of the file) for the pattern stored in the register.
+--- You "go" by `:edit`ing the file path, and then search by filling the `/` vim register with the pattern and `vim.cmd`ing `:norm n`
 --- If register doesn't exist, show a notification with the error message.
----@param assume boolean? if the pattern ends with `/e` or `?e`, set the `at_end` flag automatically (and remove the `/e` / `?e` from the end).
----@param at_end boolean? when searching, put the cursor at the end of the match, rather than at the start. this is like using the `/e` / `?e` search offset (:h search-offset / https://youtu.be/GP722zVGYAk for a tutorial on them)
-function M.global_search_get(assume, at_end)
+---@param touch boolean? the search harp will change your `/` register, so the next time you press `n`, you'll search for the harp's pattern, rather than the pattern you had before.
+---@param at_end boolean? put the cursor at the end of a match, rather than the start.
+function M.global_search_get(touch, at_end)
 	local register = M.get_char('get global search harp: ')
 	if register == nil then return end
 	local output = M.global_search_get_location(register)
@@ -532,19 +514,14 @@ function M.global_search_get(assume, at_end)
 	end
 	vim.cmd.edit(output.path)
 
-	local flags = 'c'
 	local pattern = output.pattern
 
-	local old_pattern = pattern
-	if assume then pattern = trim_offset(pattern) end
-	local search_offset = assume and pattern ~= old_pattern
-
-	if at_end or search_offset then flags = flags .. 'e' end
-
-	local prev_search = vim.fn.getreg('/')
 	vim.fn.cursor(1, 1)
+	local flags = ''
+	if at_end then flags = 'e' end
+
+	if touch then vim.fn.setreg('/', pattern) end
 	vim.fn.search(pattern, flags)
-	vim.fn.setreg('/', prev_search)
 end
 
 --- Set the path and pattern of a register in the `search` section.
@@ -587,17 +564,15 @@ end
 --- Get a character from the user, and consider it the register;
 --- Search for the pattern stored in the register, that is in a section that's relative to the current buffer's filetype (vim.bo.filetype).
 --- If the register / section is empty, displays an error message.
----@param assume boolean? if the pattern ends with `/e` or `?e`, set the `at_end` flag automatically (and remove the `/e` / `?e` from the end).
 ---@param from_start boolean? search from the start of the buffer, rather than from the current cursor position. this will move you to the start of the file, regardless of whether the pattern matches (but won't if the register / section doesn't exist). this is useful for when you want to use search harps as smarter local marks, rather than as registers for search patterns.
----@param restore boolean? after using the search pattern, restore the previous one. say you searched for 'alisa', then used a search harp. with the flag off, when you press `n`, you would continue searching for the pattern in the search harp. with this flag on, you would continue searching for 'alisa'.
 ---@param backwards boolean? specify `true` to search backwards, instead of forwards. you don't have to pass this argument at all, if you want to search forwards (in other words, it's the default behavior).
----@param at_end boolean? when searching, put the cursor at the end of the match, rather than at the start. this is like using the `/e` / `?e` search offset (:h search-offset / https://youtu.be/GP722zVGYAk for a tutorial on them)
+---@param touch boolean? the search harp will change your `/` register, so the next time you press `n`, you'll search for the harp's pattern, rather than the pattern you had before.
+---@param at_end boolean? put the cursor at the end of a match, rather than the start.
 ---@param opts table?
 function M.filetype_search_get(opts)
-	local assume = opts and opts.assume or nil
 	local from_start = opts and opts.from_start or nil
-	local restore = opts and opts.restore or nil
 	local backwards = opts and opts.backwards or nil
+	local touch = opts and opts.touch or nil
 	local at_end = opts and opts.at_end or nil
 
 	local register = M.get_char('get ft search harp: ')
@@ -608,27 +583,21 @@ function M.filetype_search_get(opts)
 		vim.notify('ft search harp ' .. register .. ' is empty')
 		return
 	end
+
+	if from_start then vim.fn.cursor(1, 1) end
 	local flags = ''
+	if at_end then flags = 'e' end
 	if backwards then flags = flags .. 'b' end
 
-	local old_pattern = pattern
-	if assume then pattern = trim_offset(pattern) end
-	local search_offset = assume and pattern ~= old_pattern
-
-	if at_end or search_offset then flags = flags .. 'e' end
-
-	local prev_search = nil
-	if restore then prev_search = vim.fn.getreg('/') end
-	if from_start then vim.fn.cursor(1, 1) end
+	if touch then vim.fn.setreg('/', pattern) end
 	vim.fn.search(pattern, flags)
-	if restore then vim.fn.setreg('/', prev_search) end
 end
 
 --- Set the pattern in a register, that's in a section relative to the `filetype`
 --- In other words, a filetype-specific search harp.
 ---@param register string
 ---@param filetype string the filetype ends up being part of the name of a new section.
----@param pattern string a vim pattern, that you would use in `/` or `:s` etc. it is later used in vim.fn.search(), so take that into account when adding patterns using this function.
+---@param pattern string a vim pattern, that you would use in `/` / `?`.
 ---@return boolean success
 function M.filetype_search_set_pattern(register, filetype, pattern)
 	return shell({ 'harp', 'update', 'filetype_search_' .. filetype, register, '--path', pattern }).code == 0
