@@ -266,7 +266,7 @@ Their naming is, respectively, `feature_get` to _use_ a harp, and `feature_set` 
 
 The second two functions exist to give you a way to access the feature more directly, and let you provide the register you want to act on, as well as the path you want to provide (for the `_set` functions). They are usually named as `feature_get_path` and `feature_set_path`.
 
-### Example mappings
+### Suggested mappings
 
 ```lua
 vim.keymap.set('n', '<Leader>i', function() require('harp').default_get() end)
@@ -291,10 +291,10 @@ vim.keymap.set('n', "<Leader>'", function() require('harp').global_mark_get() en
 vim.keymap.set('n', '<Leader>m', function() require('harp').global_mark_set() end)
 
 -- the mishmash of booleans here means: always appear at the end of the match, treat `/e` / `?e` at the end of a search pattern literally, and restore the previous search after using a local search harp
-vim.keymap.set('n', '<Leader>t', function() require('harp').perbuffer_search_get(false, false, true, false, true) end)
+vim.keymap.set('n', '<Leader>t', function() require('harp').perbuffer_search_get({ assume = true }) end)
 vim.keymap.set('n', '<Leader>T', function() require('harp').perbuffer_search_set() end
-vim.keymap.set('n', '<Leader>/', function() require('harp').filetype_search_get(true, false, false, false, false) end)
-vim.keymap.set('n', '<Leader>?', function() require('harp').filetype_search_get(true, false, false, true, false) end)
+vim.keymap.set('n', '<Leader>/', function() require('harp').filetype_search_get({ assume = true }) end)
+vim.keymap.set('n', '<Leader>?', function() require('harp').filetype_search_get({ assume = true, backwards = true }) end)
 vim.keymap.set('n', '<Leader><Leader>/', function() require('harp').filetype_search_set() end)
 vim.keymap.set('n', '<Leader>v', function() require('harp').global_search_get(false, true) end
 vim.keymap.set('n', '<Leader>V', function() require('harp').global_search_set() end
