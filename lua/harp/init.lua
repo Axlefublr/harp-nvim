@@ -435,7 +435,14 @@ end
 ---@param restore boolean? after using the search pattern, restore the previous one. say you searched for 'alisa', then used a search harp. with the flag off, when you press `n`, you would continue searching for the pattern in the search harp. with this flag on, you would continue searching for 'alisa'.
 ---@param backwards boolean? specify `true` to search backwards, instead of forwards. you don't have to pass this argument at all, if you want to search forwards (in other words, it's the default behavior).
 ---@param at_end boolean? when searching, put the cursor at the end of the match, rather than at the start. this is like using the `/e` / `?e` search offset (:h search-offset / https://youtu.be/GP722zVGYAk for a tutorial on them)
-function M.perbuffer_search_get(assume, from_start, restore, backwards, at_end)
+---@param opts table?
+function M.perbuffer_search_get(opts)
+	local assume = opts and opts.assume or nil
+	local from_start = opts and opts.from_start or nil
+	local restore = opts and opts.restore or nil
+	local backwards = opts and opts.backwards or nil
+	local at_end = opts and opts.at_end or nil
+
 	local register = M.get_char('get local search harp: ')
 	if register == nil then return end
 	local cur_buf_path = M.path_get_full_buffer()
@@ -585,7 +592,14 @@ end
 ---@param restore boolean? after using the search pattern, restore the previous one. say you searched for 'alisa', then used a search harp. with the flag off, when you press `n`, you would continue searching for the pattern in the search harp. with this flag on, you would continue searching for 'alisa'.
 ---@param backwards boolean? specify `true` to search backwards, instead of forwards. you don't have to pass this argument at all, if you want to search forwards (in other words, it's the default behavior).
 ---@param at_end boolean? when searching, put the cursor at the end of the match, rather than at the start. this is like using the `/e` / `?e` search offset (:h search-offset / https://youtu.be/GP722zVGYAk for a tutorial on them)
-function M.filetype_search_get(assume, from_start, restore, backwards, at_end)
+---@param opts table?
+function M.filetype_search_get(opts)
+	local assume = opts and opts.assume or nil
+	local from_start = opts and opts.from_start or nil
+	local restore = opts and opts.restore or nil
+	local backwards = opts and opts.backwards or nil
+	local at_end = opts and opts.at_end or nil
+
 	local register = M.get_char('get ft search harp: ')
 	if register == nil then return end
 	local filetype = vim.bo.filetype

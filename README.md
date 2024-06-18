@@ -151,13 +151,19 @@ In other words, marks are best for when the position doesn't change (often) — 
 ### Related api:
 
 ```lua
-require('harp').perbuffer_search_get(assume, from_start, restore, backwards, at_end)
+require('harp').perbuffer_search_get(opts = {
+	assume = false,
+	from_start = false,
+	restore = false,
+	backwards = false,
+	at_end = false
+})
 require('harp').perbuffer_search_set()
 require('harp').perbuffer_search_get_pattern(register, path)
 require('harp').perbuffer_search_set_pattern(register, path, pattern)
 ```
 
-This is the first `_get()` function that takes arguments. They're explained in the source code, but I'll still go over them here. If you don't pass any of them, all of them will be disabled. If you want to set some option in the middle, but not the preceeding once, do something like this: `(nil, nil, true)`. The arguments are not an opts table instead because I believe it would be more confusing to a more beginner nvim plugin configurator.
+This is the first `_get()` function that takes arguments. They're explained in the source code, but I'll still go over them here. If you don't pass the opts table at all, all of the options will be disabled.
 
 `assume` treats `/e` / `?e` at the end of the search pattern as a `:h search-offset`. Unfortunately only those are supported. The usual `+n` / `-n` after the search offset, and things like `/s` are not supported. By default (when `nil`), `/e` and `?e` at the end of a pattern are treated literally.
 
@@ -208,13 +214,13 @@ Usually, it's pretty annoying. First, how do I get to the return type itself? Us
 2. `cf>` — may sometimes work, but in the example above, it would need to be `c2f>`. And then, it might be 3 or 4 or whatever else! At which point it's too much counting to use comfortably.
 3. `ct ` — can sometimes work, for types that don't take multiple generic arguments.
 
-All of these solutions kinda suck ass. With filetype search harps, I can first search for this pattern: ` -> \zs.*\ze {` and now, I go directly to the return type, and *also* have it as my latest search (if you keep the `restore` option off).
+All of these solutions kinda suck ass. With filetype search harps, I can first search for this pattern: ` -> \zs.*\ze {` and now, I go directly to the return type, and _also_ have it as my latest search (if you keep the `restore` option off).
 
 > `\zs` and `\ze` are probably the most useful vim regex thing you didn't know about. They let you completely circumvent having to use lookahead / lookbehinds, and are way simpler conceptually. I heavily recommend reading about them: `:h /\zs`, `:h /\ze` — they will massively improve your experience of using search harps (as well as usual searches / `:s` command / etc).
 
 What this means is that now, I have the text object for the return type, and can access it with `gn`. So to finally change over the return type, I'd just do `cgn`.
 
-The benefit of using ft search harps over *actual* text objects:
+The benefit of using ft search harps over _actual_ text objects:
 
 1. Treesitter text objects specifically (in my experience) are hilariously slow. Searches aren't.
 2. You don't have to spend time searching for plugins to get your hyperspecific text object.
@@ -226,7 +232,13 @@ Don't get me wrong, if you want a text object for something as common as "value"
 ### Related api:
 
 ```lua
-require('harp').filetype_search_get(assume, from_start, restore, backwards, at_end)
+require('harp').filetype_search_get(opts = {
+	assume = false,
+	from_start = false,
+	restore = false,
+	backwards = false,
+	at_end = false
+})
 require('harp').filetype_search_set()
 require('harp').filetype_search_get_pattern(register, filetype)
 require('harp').filetype_search_set_pattern(register, filetype, pattern)
