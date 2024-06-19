@@ -547,7 +547,7 @@ function M.global_search_get_location(register)
 end
 
 --- Get a character from the user, and consider it the register;
---- First, go to the file stored in the register, and search (from the top of the file) for the pattern stored in the register.
+--- First, go to the file stored in the register, and search for the pattern stored in the register.
 --- You "go" by `:edit`ing the file path, and then search by using `feedkeys` to insert the search.
 --- If register doesn't exist, show a notification with the error message.
 ---@param edit boolean? Let the user edit the search pattern, before searching for it. This lets the user add a search offset (:h search-offset), for example; or use an existing search harp for something only slightly different.
@@ -567,7 +567,6 @@ function M.global_search_get(opts)
 	local pattern_parts = split_stored_into_pattern(pattern)
 	local search = compile_search_string(false, pattern_parts.pattern, pattern_parts.offset)
 
-	vim.fn.cursor(1, 1)
 	M.feedkeys(search)
 	if not edit then M.feedkeys_int('<CR>') end
 end

@@ -182,7 +182,7 @@ First you jump to a file, and then attempt searching for a pattern. If the regis
 
 ### Related api:
 
-Global search harps always search from the top of the file and cannot search backwards. The latter is not a technical limitation, I just don't think it's useful design: you're supposed to use these to go to a specific place, so an inconsistency like direction doesn't help that.
+Global search harps cannot search backwards. This is not a technical limitation, I just don't think it's useful design: you're supposed to use these to go to a specific place, so an inconsistency like direction doesn't help that.
 
 ```lua
 require('harp').global_search_get(opts = {
