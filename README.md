@@ -152,19 +152,27 @@ In other words, marks are best for when the position doesn't change (often) — 
 
 ```lua
 require('harp').perbuffer_search_get(opts = {
-	from_start = false,
 	backwards = false,
+	edit = false,
 })
-require('harp').perbuffer_search_set()
+require('harp').perbuffer_search_set(opts = {
+	ask = false
+})
 require('harp').perbuffer_search_get_pattern(register, path)
 require('harp').perbuffer_search_set_pattern(register, path, pattern)
 ```
 
-This is the first `_get()` function that takes an opts table. If you don't pass the opts table at all, all of the options will be disabled.
+This is the first harp, the convenience functions of which takes an opts table. If you don't pass the opts table at all, all of the options will be disabled. Global and filetype search harps similarly use an opts table.
 
-`from_start` searches from the start of the file, instead of from the current cursor position. Keep in mind, if the pattern does exist in the given register but a match was not found, you still will be moved to the start of the file.
+### `_get`
 
-`backwards` search backwards, instead of forwards.
+`backwards` searches backwards, instead of forwards.
+
+`edit` lets you edit the search pattern, before searching for it.
+
+### `_set`
+
+`ask` asks you to add an optional search offset. If you don't want to add a search offset for a pattern, just press enter / escape. This option needs to exist because the `/` vim register, that contains your latest search pattern, *doesn't* contain the search offset that you used, so we can't just grab it along with the pattern. This option is not on by default, because most people don't know what search offsets are, and having to press enter every time for no reason would be annoying for them. (`:h search-offset`)
 
 ## Global search harps
 
@@ -174,11 +182,15 @@ First you jump to a file, and then attempt searching for a pattern. If the regis
 
 ### Related api:
 
-Unlike the local variant of search harps, global search harps always search from the top of the file and cannot search backwards. This is not a technical limitation, I don't think that's useful design: you're supposed to use these to go to a specific place, so inconsistencies like cursor position and directions don't help that.
+Global search harps always search from the top of the file and cannot search backwards. The latter is not a technical limitation, I just don't think it's useful design: you're supposed to use these to go to a specific place, so an inconsistency like direction doesn't help that.
 
 ```lua
-require('harp').global_search_get()
-require('harp').global_search_set()
+require('harp').global_search_get(opts = {
+	edit = false
+})
+require('harp').global_search_set(opts = {
+	ask = false
+})
 require('harp').global_search_get_location(register)
 require('harp').global_search_set_location(register, path, pattern)
 ```
@@ -203,7 +215,7 @@ Usually, it's pretty annoying. First, how do I get to the return type itself? Us
 2. `cf>` — may sometimes work, but in the example above, it would need to be `c2f>`. And then, it might be 3 or 4 or whatever else! At which point it's too much counting to use comfortably.
 3. `ct ` — can sometimes work, for types that don't take multiple generic arguments.
 
-All of these solutions kinda suck ass. With filetype search harps, I can first search for this pattern: ` -> \zs.*\ze {` and now, I go directly to the return type, and _also_ have it as my latest search (if you keep the `restore` option off).
+All of these solutions kinda suck ass. With filetype search harps, I can first search for this pattern: ` -> \zs.*\ze {` and now, I go directly to the return type, and _also_ have it as my latest search.
 
 > `\zs` and `\ze` are probably the most useful vim regex thing you didn't know about. They let you completely circumvent having to use lookahead / lookbehinds, and are way simpler conceptually. I heavily recommend reading about them: `:h /\zs`, `:h /\ze` — they will massively improve your experience of using search harps (as well as usual searches / `:s` command / etc).
 
@@ -222,10 +234,12 @@ Don't get me wrong, if you want a text object for something as common as "value"
 
 ```lua
 require('harp').filetype_search_get(opts = {
-	from_start = false,
 	backwards = false,
+	edit = false
 })
-require('harp').filetype_search_set()
+require('harp').filetype_search_set(opts = {
+	ask = false
+})
 require('harp').filetype_search_get_pattern(register, filetype)
 require('harp').filetype_search_set_pattern(register, filetype, pattern)
 ```
@@ -276,13 +290,15 @@ vim.keymap.set('n', "'^", "'^")
 vim.keymap.set('n', "<Leader>'", function() require('harp').global_mark_get() end)
 vim.keymap.set('n', '<Leader>m', function() require('harp').global_mark_set() end)
 
+-- I don't include the `ask` option in the suggested mappings because I realize most people aren't comfortable with search offsets.
+-- But I *do* heavily recommend checking them out and using them, they'll improve your search harp experience massively.
 vim.keymap.set('n', '<Leader>s/', function() require('harp').perbuffer_search_get() end)
 vim.keymap.set('n', '<Leader>s?', function() require('harp').perbuffer_search_get({ backwards = true }) end)
 vim.keymap.set('n', '<Leader>S/', function() require('harp').perbuffer_search_set() end
 vim.keymap.set('n', '<Leader>sf', function() require('harp').filetype_search_get() end)
 vim.keymap.set('n', '<Leader>sF', function() require('harp').filetype_search_get({ backwards = true }) end)
 vim.keymap.set('n', '<Leader>Sf', function() require('harp').filetype_search_set() end)
-vim.keymap.set('n', '<Leader>sc', function() require('harp').global_search_get(false, true) end
+vim.keymap.set('n', '<Leader>sc', function() require('harp').global_search_get() end
 vim.keymap.set('n', '<Leader>Sc', function() require('harp').global_search_set() end
 
 vim.keymap.set('n', '<Leader>sd', function() require('harp').cd_get() end)
@@ -311,6 +327,18 @@ require('harp').split_by_newlines(string)
 ```
 
 Get an array-like table containing each of the lines in a multiline text.
+
+```lua
+require('harp').feedkeys(keys)
+```
+
+Enqueue `keys` to be pressed, as if the user pressed them.
+
+```lua
+require('harp').feedkeys_int(keys)
+```
+
+Like `feedkeys`, but interpret special characters. `<CR>` will be interpreted as the user pressing the enter key.
 
 ```lua
 require('harp').path_get_full_buffer()
