@@ -51,9 +51,7 @@ end
 
 local function split_stored_into_pattern(stored)
 	local pattern_parts = vim.fn.split(stored, hacky_delimiter)
-	if #pattern_parts == 1 then
-		return { pattern = pattern_parts[1] }
-	end
+	if #pattern_parts == 1 then return { pattern = pattern_parts[1] } end
 	local offset = table.remove(pattern_parts, #pattern_parts)
 	local pattern_only = vim.fn.join(pattern_parts, hacky_delimiter)
 	return { pattern = pattern_only, offset = offset }
@@ -76,11 +74,16 @@ end
 
 ---@param pattern string
 ---@param ask boolean?
----@return string pattern
+---@return string? pattern
 local function maybe_add_offset(pattern, ask)
 	if not ask then return pattern end
-	local offset = vim.fn.input('add a search offset: ')
-	if not offset or offset == '' then return pattern end
+	local offset = vim.fn.input({ prompt = 'add a search offset: ', cancelreturn = hacky_delimiter })
+	if not offset then return pattern end
+	if offset == hacky_delimiter then
+		return nil
+	elseif offset == '' then
+		return pattern
+	end
 	pattern = pattern .. hacky_delimiter .. offset
 	return pattern
 end
@@ -529,7 +532,8 @@ function M.perbuffer_search_set(opts)
 	if register == nil then return end
 	local path = M.path_get_full_buffer()
 	local pattern = vim.fn.getreg('/')
-	pattern = maybe_add_offset(pattern, ask)
+	local pattern = maybe_add_offset(pattern, ask)
+	if not pattern then return end
 	local success = M.perbuffer_search_set_pattern(register, path, pattern)
 	if success then vim.notify('set local search harp ' .. register) end
 end
@@ -577,8 +581,7 @@ end
 ---@param pattern string
 ---@return boolean success
 function M.global_search_set_location(register, path, pattern)
-	return shell({ 'harp', 'update', 'search', register, '--path', path .. hacky_delimiter .. pattern }).code
-		== 0
+	return shell({ 'harp', 'update', 'search', register, '--path', path .. hacky_delimiter .. pattern }).code == 0
 end
 
 --- Get a character from the user, and consider it the register;
@@ -594,7 +597,8 @@ function M.global_search_set(opts)
 	if register == nil then return end
 	local path = M.path_get_full_buffer()
 	local pattern = vim.fn.getreg('/')
-	pattern = maybe_add_offset(pattern, ask)
+	local pattern = maybe_add_offset(pattern, ask)
+	if not pattern then return end
 	local success = M.global_search_set_location(register, path, pattern)
 	if success then vim.notify('set global search harp ' .. register) end
 end
@@ -660,7 +664,8 @@ function M.filetype_search_set(opts)
 	if register == nil then return end
 	local filetype = vim.bo.filetype
 	local pattern = vim.fn.getreg('/')
-	pattern = maybe_add_offset(pattern, ask)
+	local pattern = maybe_add_offset(pattern, ask)
+	if not pattern then return end
 	local success = M.filetype_search_set_pattern(register, filetype, pattern)
 	if success then vim.notify('set ft search harp ' .. register) end
 end

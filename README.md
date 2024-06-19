@@ -172,7 +172,7 @@ This is the first harp, the convenience functions of which takes an opts table. 
 
 ### `_set`
 
-`ask` asks you to add an optional search offset. If you don't want to add a search offset for a pattern, just press enter / escape. This option needs to exist because the `/` vim register, that contains your latest search pattern, *doesn't* contain the search offset that you used, so we can't just grab it along with the pattern. This option is not on by default, because most people don't know what search offsets are, and having to press enter every time for no reason would be annoying for them. (`:h search-offset`)
+`ask` asks you to add an optional search offset. If you don't want to add a search offset for a pattern, just press enter. If you reconsidered, and don't want to set the search harp at all, press escape. This option needs to exist because the `/` vim register, that contains your latest search pattern, *doesn't* contain the search offset that you used, so we can't just grab it along with the pattern. This option is not on by default, because most people don't know what search offsets are, and having to press enter every time for no reason would be annoying for them. (`:h search-offset`)
 
 ## Global search harps
 
