@@ -151,7 +151,7 @@ end
 ---@param path string
 ---@return boolean success
 function M.default_set_path(register, path)
-	return shell({ 'harp', 'update', 'harps', register, '--path', '--', path }).code == 0
+	return shell({ 'harp', 'update', 'harps', register, '--path', path }).code == 0
 end
 
 --- Get a character from the user, and consider it the register;
