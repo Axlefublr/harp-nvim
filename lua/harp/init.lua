@@ -345,7 +345,7 @@ function M.perbuffer_mark_set()
 	local path = M.path_get_full_buffer()
 	local cursor = vim.api.nvim_win_get_cursor(0)
 	local line = cursor[1]
-	local column = cursor[2]
+	local column = cursor[2] + 1
 	local success = M.perbuffer_mark_set_location(register, path, line, column)
 	if success then vim.notify('set local mark ' .. register) end
 end
@@ -415,7 +415,7 @@ function M.global_mark_set()
 	local path = M.path_get_full_buffer()
 	local cursor = vim.api.nvim_win_get_cursor(0)
 	local line = cursor[1]
-	local column = cursor[2]
+	local column = cursor[2] + 1
 	local success = M.global_mark_set_location(register, path, line, column)
 	if success then vim.notify('set global mark ' .. register) end
 end
